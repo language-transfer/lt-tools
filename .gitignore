@@ -1,0 +1,7 @@
+# Ignore everything in data by default
+data/**
+
+# Allow directories and any .meta.* files inside data
+!data/**/
+!data/**/*.meta
+!data/**/*.meta.*
