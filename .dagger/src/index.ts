@@ -130,46 +130,17 @@ export class LtTools {
     return container.file(outputPath);
   }
 
-  async getCourseIndices(course: Directory): Promise<number[]> {
-    const listTxt = await course.file("list.txt").contents();
-    return listTxt
-      .split("\n")
-      .filter((line) => line.trim() !== "")
-      .map((_, idx) => idx);
-  }
-
-  async getCourseNames(course: Directory): Promise<string[]> {
-    const listTxt = await course.file("list.txt").contents();
-    return listTxt.split("\n").filter((line) => line.trim() !== "");
-  }
-
+  /**
+   * Remux a single lesson from core by course ID and lesson index.
+   */
   @func()
-  async remuxCourse(course: Directory): Promise<Directory> {
-    // course directory has:
-    //   list.txt
-    // tracks/
-    //   track filenames as in list.txt, one per line
-
-    const list = (await course.file("list.txt").contents())
-      .split("\n")
-      .filter((line) => line.trim() !== "");
-    const tracksDir = course.directory("tracks");
-    const files = list.map((file) => tracksDir.file(file));
-
-    const tasks = files.map(async (file, i) => {
-      const newName = `${i}.mp4`;
-      const remuxed = await this.remux(file, newName);
-      return { fileName: newName, remuxed };
-    });
-
-    const remuxedFiles = await Promise.all(tasks);
-
-    let outDir = dag.directory();
-    for (const { fileName, remuxed } of remuxedFiles) {
-      outDir = outDir.withFile(fileName, remuxed);
-    }
-
-    return outDir;
+  async remuxLesson(
+    core: Directory,
+    courseId: string,
+    lesson: number
+  ): Promise<File> {
+    const lessonFile = await this.getLessonFile(core, courseId, lesson);
+    return this.remux(lessonFile, `${lesson}.mp4`);
   }
 
   /**
@@ -216,19 +187,30 @@ export class LtTools {
   }
 
   /**
+   * Create a low-quality mp4 audio-only file for a single lesson.
+   */
+  @func()
+  async lowQualityLesson(
+    core: Directory,
+    courseId: string,
+    lesson: number
+  ): Promise<File> {
+    const remuxed = await this.remuxLesson(core, courseId, lesson);
+    return this.lowQualityTrack(remuxed, lesson);
+  }
+
+  /**
    * Create low-quality mp4 audio-only files for a course using indexed names.
    */
   @func()
-  async lowQualityCourse(course: Directory): Promise<Directory> {
-    const list = (await course.file("list.txt").contents())
-      .split("\n")
-      .filter((line) => line.trim() !== "");
+  async lowQualityCourse(
+    core: Directory,
+    courseId: string
+  ): Promise<Directory> {
+    const tracks = await this.getCourseTrackList(core, courseId);
 
-    const remuxedCourse = await this.remuxCourse(course);
-
-    const tasks = list.map(async (_, i) => {
-      const remuxedTrack = remuxedCourse.file(`${i}.mp4`);
-      const encoded = await this.lowQualityTrack(remuxedTrack, i);
+    const tasks = tracks.map(async (_, i) => {
+      const encoded = await this.lowQualityLesson(core, courseId, i);
       return { fileName: `${i}-lq.mp4`, encoded };
     });
 
@@ -242,17 +224,36 @@ export class LtTools {
     return outDir;
   }
 
+  /**
+   * Remux an entire course by ID.
+   */
+  @func()
+  async remuxCourseById(
+    core: Directory,
+    courseId: string
+  ): Promise<Directory> {
+    const tracks = await this.getCourseTrackList(core, courseId);
+    const tasks = tracks.map(async (_, i) => {
+      const remuxed = await this.remuxLesson(core, courseId, i);
+      return { fileName: `${i}.mp4`, remuxed };
+    });
+
+    const remuxedFiles = await Promise.all(tasks);
+
+    let outDir = dag.directory();
+    for (const { fileName, remuxed } of remuxedFiles) {
+      outDir = outDir.withFile(fileName, remuxed);
+    }
+
+    return outDir;
+  }
+
   @func()
   async remuxAllCourses(core: Directory): Promise<Directory> {
-    const list = (await core.file("list.txt").contents())
-      .split("\n")
-      .filter((line) => line.trim() !== "");
-    const coursesDir = core.directory("courses");
-    const courses = list.map((course) => coursesDir.directory(course));
+    const courses = await this.getCoreCourseIds(core);
 
-    const tasks = courses.map(async (courseDir, i) => {
-      const courseName = list[i];
-      const remuxedCourse = await this.remuxCourse(courseDir);
+    const tasks = courses.map(async (courseName) => {
+      const remuxedCourse = await this.remuxCourseById(core, courseName);
       return { courseName, remuxedCourse };
     });
 
@@ -266,5 +267,58 @@ export class LtTools {
     return outDir;
   }
 
-  
+  /**
+   * Helpers
+   */
+  private getCourseDir(core: Directory, courseId: string): Directory {
+    return core.directory("courses").directory(courseId);
+  }
+
+  private async getCoreCourseIds(core: Directory): Promise<string[]> {
+    const listTxt = await core.file("list.txt").contents();
+    return listTxt
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line !== "");
+  }
+
+  private async getCourseTrackList(
+    core: Directory,
+    courseId: string
+  ): Promise<string[]> {
+    const listTxt = await this.getCourseDir(core, courseId)
+      .file("list.txt")
+      .contents();
+    const tracks = listTxt
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line !== "");
+
+    if (tracks.length === 0) {
+      throw new Error(`course "${courseId}" has no tracks`);
+    }
+
+    return tracks;
+  }
+
+  private async getLessonFile(
+    core: Directory,
+    courseId: string,
+    lesson: number
+  ): Promise<File> {
+    const tracks = await this.getCourseTrackList(core, courseId);
+
+    if (lesson < 0 || lesson >= tracks.length) {
+      throw new Error(
+        `lesson index ${lesson} out of bounds for course "${courseId}" (0..${
+          tracks.length - 1
+        })`
+      );
+    }
+
+    const trackName = tracks[lesson];
+    return this.getCourseDir(core, courseId)
+      .directory("tracks")
+      .file(trackName);
+  }
 }
