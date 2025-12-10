@@ -13,7 +13,14 @@
  * rest is a long description with more detail on the module's purpose or usage,
  * if appropriate. All modules should have a short description.
  */
-import { dag, Container, Directory, object, func } from "@dagger.io/dagger";
+import {
+  dag,
+  Container,
+  Directory,
+  File,
+  object,
+  func,
+} from "@dagger.io/dagger";
 
 @object()
 export class LtTools {
@@ -76,24 +83,118 @@ export class LtTools {
   }
 
   /**
-   * Returns a container that echoes whatever string argument is provided
+   * Remux a media file into an mp4 with metadata stripped using a pinned ffmpeg.
+   * We were hoping to use m4a, but it supports only AAC, not MP3 codec. MP4 should
+   * work fine, even though it sort of signifies video file.
    */
   @func()
-  containerEcho(stringArg: string): Container {
-    return dag.container().from("alpine:latest").withExec(["echo", stringArg]);
+  async remux(input: File, outputName = "output.mp4"): Promise<File> {
+    const outputPath = `/out/${outputName}`;
+
+    // ffmpeg infers stuff from file extension on the output side...
+    // does it for inputs? not sure. this is a leaky abstraction compared to
+    // coming up with our own filename, but /shrug maybe the right call
+    const inputFilename = await input.name();
+
+    const container = dag
+      .container()
+      .from("ghcr.io/jrottenberg/ffmpeg:8.0-alpine")
+      .withMountedFile(inputFilename, input)
+      .withExec([
+        "sh",
+        "-c",
+        [
+          "set -euo pipefail",
+          "mkdir -p /out",
+          [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            inputFilename,
+            "-map_metadata",
+            "-1",
+            "-map_chapters",
+            "-1",
+            "-vn",
+            "-c:a",
+            "copy",
+            "-movflags",
+            "+faststart",
+            outputPath,
+          ].join(" "),
+        ].join("\n"),
+      ]);
+
+    return container.file(outputPath);
   }
 
-  /**
-   * Returns lines that match a pattern in the files of the provided Directory
-   */
-  @func()
-  async grepDir(directoryArg: Directory, pattern: string): Promise<string> {
-    return dag
-      .container()
-      .from("alpine:latest")
-      .withMountedDirectory("/mnt", directoryArg)
-      .withWorkdir("/mnt")
-      .withExec(["grep", "-R", pattern, "."])
-      .stdout();
+  async getCourseIndices(course: Directory): Promise<number[]> {
+    const listTxt = await course.file("list.txt").contents();
+    return listTxt
+      .split("\n")
+      .filter((line) => line.trim() !== "")
+      .map((_, idx) => idx);
   }
+
+  async getCourseNames(course: Directory): Promise<string[]> {
+    const listTxt = await course.file("list.txt").contents();
+    return listTxt.split("\n").filter((line) => line.trim() !== "");
+  }
+
+  @func()
+  async remuxCourse(course: Directory): Promise<Directory> {
+    // course directory has:
+    //   list.txt
+    // tracks/
+    //   track filenames as in list.txt, one per line
+
+    const list = (await course.file("list.txt").contents())
+      .split("\n")
+      .filter((line) => line.trim() !== "");
+    const tracksDir = course.directory("tracks");
+    const files = list.map((file) => tracksDir.file(file));
+
+    const tasks = files.map(async (file, i) => {
+      const newName = `${i}.mp4`;
+      const remuxed = await this.remux(file, newName);
+      return { fileName: newName, remuxed };
+    });
+
+    const remuxedFiles = await Promise.all(tasks);
+
+    let outDir = dag.directory();
+    for (const { fileName, remuxed } of remuxedFiles) {
+      outDir = outDir.withFile(fileName, remuxed);
+    }
+
+    return outDir;
+  }
+
+  @func()
+  async remuxAllCourses(core: Directory): Promise<Directory> {
+    const list = (await core.file("list.txt").contents())
+      .split("\n")
+      .filter((line) => line.trim() !== "");
+    const coursesDir = core.directory("courses");
+    const courses = list.map((course) => coursesDir.directory(course));
+
+    const tasks = courses.map(async (courseDir, i) => {
+      const courseName = list[i];
+      const remuxedCourse = await this.remuxCourse(courseDir);
+      return { courseName, remuxedCourse };
+    });
+
+    const remuxedCourses = await Promise.all(tasks);
+
+    let outDir = dag.directory();
+    for (const { courseName, remuxedCourse } of remuxedCourses) {
+      outDir = outDir.withDirectory(courseName, remuxedCourse);
+    }
+
+    return outDir;
+  }
+
+  
 }
