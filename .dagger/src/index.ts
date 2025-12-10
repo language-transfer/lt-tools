@@ -50,57 +50,25 @@ export class LtTools {
 
   /**
    * Verify data/core against existing integrity files.
-   *
-   * Fails if hashes differ, if a checksum is missing for a core file,
-   * or if a checksum points to a missing core file.
    */
   @func()
   async verifyCoreIntegrity(
     core: Directory,
     integrity: Directory
   ): Promise<string> {
+    const expectedIntegrity = await this.coreIntegrity(core);
+
     return dag
       .container()
       .from("alpine:3.20")
-      .withMountedDirectory("/core", core)
-      .withMountedDirectory("/integrity", integrity)
+      .withMountedDirectory("/expected", expectedIntegrity)
+      .withMountedDirectory("/actual", integrity)
       .withExec([
         "sh",
         "-c",
         [
           "set -euo pipefail",
-          "sums=$(mktemp)",
-          "cores=$(mktemp)",
-          'trap \'rm -f "$sums" "$cores"\' EXIT',
-          "find /integrity -type f -name '*.meta.sha256' -print0 > \"$sums\"",
-          'find /core -type f -print0 > "$cores"',
-          "errors=0",
-          "while IFS= read -r -d '' sumfile; do",
-          "  rel=${sumfile#/integrity/}",
-          '  corefile="/core/${rel%.meta.sha256}"',
-          "  expected=$(cut -d' ' -f1 \"$sumfile\")",
-          '  if [ ! -f "$corefile" ]; then',
-          '    echo "missing core file: ${rel%.meta.sha256}" >&2',
-          "    errors=1",
-          "    continue",
-          "  fi",
-          "  actual=$(sha256sum \"$corefile\" | cut -d' ' -f1)",
-          '  if [ "$actual" != "$expected" ]; then',
-          '    echo "hash mismatch: ${rel%.meta.sha256}" >&2',
-          "    errors=1",
-          "  fi",
-          'done < "$sums"',
-          "while IFS= read -r -d '' corefile; do",
-          "  rel=${corefile#/core/}",
-          '  sumfile="/integrity/${rel}.meta.sha256"',
-          '  if [ ! -f "$sumfile" ]; then',
-          '    echo "missing checksum: ${rel}" >&2',
-          "    errors=1",
-          "  fi",
-          'done < "$cores"',
-          'if [ "$errors" -ne 0 ]; then',
-          '  exit "$errors"',
-          "fi",
+          "diff -ruN /expected /actual",
           'echo "core integrity OK"',
         ].join("\n"),
       ])
