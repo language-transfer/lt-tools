@@ -172,6 +172,76 @@ export class LtTools {
     return outDir;
   }
 
+  /**
+   * Create a low-quality audio-only mp4 from a single track.
+   */
+  @func()
+  async lowQualityTrack(file: File, index: number): Promise<File> {
+    const inputName = await file.name();
+    const outputName = `${index}-lq.mp4`;
+    const outputPath = `/out/${outputName}`;
+
+    const container = dag
+      .container()
+      .from("ghcr.io/jrottenberg/ffmpeg:8.0-alpine")
+      .withMountedFile(`/in/${inputName}`, file)
+      .withExec([
+        "sh",
+        "-c",
+        [
+          "set -euo pipefail",
+          `INPUT="/in/${inputName}"`,
+          `OUTPUT="${outputPath}"`,
+          "mkdir -p /out",
+          [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            '-i "$INPUT"',
+            "-map 0:a",
+            "-map_metadata -1",
+            "-map_chapters -1",
+            "-vn",
+            "-c:a aac",
+            "-b:a 64k",
+            "-ac 1",
+            "-movflags +faststart",
+            '"$OUTPUT"',
+          ].join(" "),
+        ].join("\n"),
+      ]);
+
+    return container.file(outputPath);
+  }
+
+  /**
+   * Create low-quality mp4 audio-only files for a course using indexed names.
+   */
+  @func()
+  async lowQualityCourse(course: Directory): Promise<Directory> {
+    const list = (await course.file("list.txt").contents())
+      .split("\n")
+      .filter((line) => line.trim() !== "");
+
+    const remuxedCourse = await this.remuxCourse(course);
+
+    const tasks = list.map(async (_, i) => {
+      const remuxedTrack = remuxedCourse.file(`${i}.mp4`);
+      const encoded = await this.lowQualityTrack(remuxedTrack, i);
+      return { fileName: `${i}-lq.mp4`, encoded };
+    });
+
+    const encodedFiles = await Promise.all(tasks);
+
+    let outDir = dag.directory();
+    for (const { fileName, encoded } of encodedFiles) {
+      outDir = outDir.withFile(fileName, encoded);
+    }
+
+    return outDir;
+  }
+
   @func()
   async remuxAllCourses(core: Directory): Promise<Directory> {
     const list = (await core.file("list.txt").contents())
