@@ -18,6 +18,18 @@ import { createHash } from "crypto";
 
 const BUILD_VERSION = 2;
 
+type FilePointer = {
+  _type: "file";
+  object: string;
+  filesize: number;
+  mimeType: string;
+};
+
+type FileWithPointer = {
+  file: File;
+  pointer: FilePointer;
+};
+
 async function hashFile(file: File): Promise<string> {
   const inputName = await file.name();
   const hash = await dag
@@ -63,6 +75,35 @@ async function fileExists(file: File): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+const MIME_TYPE_MAP = {
+  mp4: "video/mp4",
+  json: "application/json",
+};
+
+async function withFilePointer(file: File): Promise<FileWithPointer> {
+  const [name, hash, size] = await Promise.all([
+    file.name(),
+    hashFile(file),
+    file.size(),
+  ]);
+
+  const ext = name.split(".").pop() ?? null;
+  if (!ext || !MIME_TYPE_MAP[ext as keyof typeof MIME_TYPE_MAP]) {
+    throw new Error(`Unsupported file extension: ${ext}`);
+  }
+  const mimeType = MIME_TYPE_MAP[ext as keyof typeof MIME_TYPE_MAP];
+
+  return {
+    file: file.withName(hash),
+    pointer: {
+      _type: "file",
+      object: hash,
+      filesize: size,
+      mimeType,
+    },
+  };
 }
 
 type WithUpdatedCache<T> = {
@@ -135,25 +176,23 @@ export class LtTools {
    * We were hoping to use m4a, but it supports only AAC, not MP3 codec. MP4 should
    * work fine, even though it sort of signifies video file.
    */
-  private async remux(
+  private async remuxToMp4(
     materializedCacheDir: Directory,
-    input: File,
-    outputName = "output.mp4"
-  ): Promise<WithUpdatedCache<File>> {
+    input: File
+  ): Promise<WithUpdatedCache<FileWithPointer>> {
     const cacheKey = `cache-${await this.hashArgs(
       "remux",
-      await hashFile(input),
-      outputName
+      await hashFile(input)
     )}`;
-    const cached = materializedCacheDir.file(cacheKey);
-    if (await fileExists(cached)) {
+    const cachedFile = materializedCacheDir.file(cacheKey);
+    if (await fileExists(cachedFile)) {
       return {
-        item: cached,
+        item: await withFilePointer(cachedFile.withName("output.mp4")),
         cacheDirectory: materializedCacheDir,
       };
     }
 
-    const outputPath = `/out/${outputName}`;
+    const outputPath = `/out/output.mp4`;
 
     // ffmpeg infers stuff from file extension on the output side...
     // does it for inputs? not sure. this is a leaky abstraction compared to
@@ -196,8 +235,10 @@ export class LtTools {
       container.file(outputPath)
     );
 
+    const file = await withFilePointer(container.file(outputPath));
+
     return {
-      item: container.file(outputPath),
+      item: file,
       cacheDirectory: updatedCacheDir,
     };
   }
@@ -249,9 +290,9 @@ export class LtTools {
     core: Directory,
     courseId: string,
     lesson: number
-  ): Promise<WithUpdatedCache<File>> {
+  ): Promise<WithUpdatedCache<FileWithPointer>> {
     const lessonFile = await this.getLessonFile(core, courseId, lesson);
-    return await this.remux(materializedCacheDir, lessonFile, `${lesson}.mp4`);
+    return await this.remuxToMp4(materializedCacheDir, lessonFile);
   }
 
   /**
@@ -327,7 +368,7 @@ export class LtTools {
     core: Directory,
     courseId: string,
     lesson: number
-  ): Promise<WithUpdatedCache<File>> {
+  ): Promise<WithUpdatedCache<FileWithPointer>> {
     let updatedCacheDir = materializedCacheDir;
     const remuxed = await this.remuxLesson(
       updatedCacheDir,
@@ -339,12 +380,12 @@ export class LtTools {
 
     const lowQualityTrack = await this.lowQualityTrack(
       materializedCacheDir,
-      remuxed.item
+      remuxed.item.file
     );
     updatedCacheDir = lowQualityTrack.cacheDirectory;
 
     return {
-      item: lowQualityTrack.item,
+      item: await withFilePointer(lowQualityTrack.item),
       cacheDirectory: updatedCacheDir,
     };
   }
@@ -354,8 +395,7 @@ export class LtTools {
    */
   private async packageAllCoursesInner(
     materializedCacheDir: Directory,
-    core: Directory,
-    urlBase: string = "https://downloads.languagetransfer.org/"
+    core: Directory
   ): Promise<WithUpdatedCache<Directory>> {
     let updatedCacheDir = materializedCacheDir;
 
@@ -363,7 +403,7 @@ export class LtTools {
     let outDir = dag.directory();
     const coursesIndex: Array<{
       id: string;
-      meta: string;
+      meta: FilePointer;
       lessons: number;
     }> = [];
 
@@ -371,21 +411,19 @@ export class LtTools {
       const pkg = await this.buildCoursePackage(
         updatedCacheDir,
         core,
-        courseId,
-        urlBase
+        courseId
       );
       updatedCacheDir = pkg.cacheDirectory;
 
       for (const asset of pkg.item.assets) {
-        outDir = outDir.withFile(asset.filename, asset.file);
+        outDir = outDir.withFile(".", asset);
       }
 
-      const hashedMeta = await this.hashWithOriginalExt(pkg.item.metaFile);
-      outDir = outDir.withFile(hashedMeta.filename, hashedMeta.file);
+      outDir = outDir.withFile(".", pkg.item.metaFile.file);
 
       coursesIndex.push({
         id: courseId,
-        meta: this.buildUrl(urlBase, hashedMeta.filename),
+        meta: pkg.item.metaFile.pointer,
         lessons: pkg.item.lessonCount,
       });
     }
@@ -409,13 +447,11 @@ export class LtTools {
   @func()
   async packageAllCourses(
     materializedCacheDir: Directory,
-    core: Directory,
-    urlBase: string = "https://downloads.languagetransfer.org/"
+    core: Directory
   ): Promise<Directory> {
     const { item } = await this.packageAllCoursesInner(
       materializedCacheDir,
-      core,
-      urlBase
+      core
     );
     return item;
   }
@@ -423,13 +459,11 @@ export class LtTools {
   @func()
   async packageAllCoursesCache(
     materializedCacheDir: Directory,
-    core: Directory,
-    urlBase: string = "https://downloads.languagetransfer.org/"
+    core: Directory
   ): Promise<Directory> {
     const { cacheDirectory } = await this.packageAllCoursesInner(
       materializedCacheDir,
-      core,
-      urlBase
+      core
     );
     return cacheDirectory;
   }
@@ -437,10 +471,6 @@ export class LtTools {
   /**
    * Helpers
    */
-  private buildUrl(base: string, filename: string): string {
-    return base.endsWith("/") ? `${base}${filename}` : `${base}/${filename}`;
-  }
-
   private getCourseDir(core: Directory, courseId: string): Directory {
     return core.directory("courses").directory(courseId);
   }
@@ -500,13 +530,11 @@ export class LtTools {
   private async buildCoursePackage(
     materializedCacheDir: Directory,
     core: Directory,
-    courseId: string,
-    urlBase: string
+    courseId: string
   ): Promise<
     WithUpdatedCache<{
-      assets: Array<{ filename: string; file: File }>;
-      metaFile: File;
-      metaFilename: string;
+      assets: File[];
+      metaFile: FileWithPointer;
       lessonCount: number;
     }>
   > {
@@ -516,11 +544,13 @@ export class LtTools {
     const lessonsMeta: Array<{
       id: string;
       title: string;
-      urls: string[];
-      filesizes: Record<string, number>;
+      variants: {
+        lq: FilePointer;
+        hq: FilePointer;
+      };
       duration: number;
     }> = [];
-    const assets: Array<{ filename: string; file: File }> = [];
+    const assets: Array<File> = [];
 
     for (let i = 0; i < tracks.length; i++) {
       const hq = await this.remuxLesson(updatedCacheDir, core, courseId, i);
@@ -533,30 +563,19 @@ export class LtTools {
       );
       updatedCacheDir = lq.cacheDirectory;
 
-      const hashedHq = await this.hashWithOriginalExt(hq.item);
-      const hashedLq = await this.hashWithOriginalExt(lq.item);
+      assets.push(hq.item.file, lq.item.file);
 
-      assets.push(
-        { filename: hashedHq.filename, file: hashedHq.file },
-        { filename: hashedLq.filename, file: hashedLq.file }
-      );
-
-      const duration = await this.fileDurationSeconds(hashedHq.file);
-      const hqSize = await this.fileSize(hashedHq.file);
-      const lqSize = await this.fileSize(hashedLq.file);
+      const duration = await this.fileDurationSeconds(hq.item.file);
 
       const lessonId = this.getLessonId(courseId, i);
       const title = `Lesson ${i + 1}`;
-      const hqUrl = this.buildUrl(urlBase, hashedHq.filename);
-      const lqUrl = this.buildUrl(urlBase, hashedLq.filename);
 
       lessonsMeta.push({
         id: lessonId,
         title,
-        urls: [lqUrl, hqUrl],
-        filesizes: {
-          [lqUrl]: lqSize,
-          [hqUrl]: hqSize,
+        variants: {
+          lq: lq.item.pointer,
+          hq: hq.item.pointer,
         },
         duration,
       });
@@ -576,27 +595,11 @@ export class LtTools {
     return {
       item: {
         assets,
-        metaFile,
-        metaFilename,
+        metaFile: await withFilePointer(metaFile),
         lessonCount: tracks.length,
       },
       cacheDirectory: updatedCacheDir,
     };
-  }
-
-  private async hashWithOriginalExt(
-    file: File
-  ): Promise<{ file: File; filename: string; sha: string }> {
-    const inputName = await file.name();
-    const extIndex = inputName.lastIndexOf(".");
-    const ext = extIndex >= 0 ? inputName.slice(extIndex + 1) : "";
-
-    const sha = await hashFile(file);
-
-    const filename = ext ? `${sha}.${ext}` : sha;
-
-    const outDir = dag.directory().withFile(filename, file);
-    return { file: outDir.file(filename), filename, sha };
   }
 
   /**
