@@ -14,6 +14,7 @@
  * if appropriate. All modules should have a short description.
  */
 import { dag, Directory, File, object, func } from "@dagger.io/dagger";
+import { createHash } from "crypto";
 
 const BUILD_VERSION = 2;
 
@@ -32,6 +33,26 @@ async function hashFile(file: File): Promise<string> {
       ].join("\n"),
     ])
     .stdout();
+  return hash.trim();
+}
+
+async function hashDirectory(directory: Directory): Promise<string> {
+  const hash = await dag
+    .container()
+    .from("alpine:3.20")
+    .withMountedDirectory("/in", directory)
+    .withWorkdir("/in")
+    .withExec([
+      "sh",
+      "-c",
+      [
+        "set -euo pipefail",
+        // Hash all files (names + contents) in deterministic order, then hash the list.
+        'find . -type f -print | sort | while read -r file; do sha256sum "$file"; done | sha256sum | cut -d" " -f1',
+      ].join("\n"),
+    ])
+    .stdout();
+
   return hash.trim();
 }
 
@@ -119,8 +140,11 @@ export class LtTools {
     input: File,
     outputName = "output.mp4"
   ): Promise<WithUpdatedCache<File>> {
-    // TODO: just hash the entire arg set as one big cache key
-    const cacheKey = `remux-${await hashFile(input)}-${outputName}`;
+    const cacheKey = `cache-${await this.hashArgs(
+      "remux",
+      await hashFile(input),
+      outputName
+    )}`;
     const cached = materializedCacheDir.file(cacheKey);
     if (await fileExists(cached)) {
       return {
@@ -237,8 +261,10 @@ export class LtTools {
     materializedCacheDir: Directory,
     file: File
   ): Promise<WithUpdatedCache<File>> {
-    // TODO: just hash the entire arg set as one big cache key
-    const cacheKey = `lowQualityTrack-${await hashFile(file)}`;
+    const cacheKey = `cache-${await this.hashArgs(
+      "lowQualityTrack",
+      await hashFile(file)
+    )}`;
     const cached = materializedCacheDir.file(cacheKey);
     if (await fileExists(cached)) {
       return {
@@ -565,25 +591,24 @@ export class LtTools {
     const extIndex = inputName.lastIndexOf(".");
     const ext = extIndex >= 0 ? inputName.slice(extIndex + 1) : "";
 
-    const sha = (
-      await dag
-        .container()
-        .from("alpine:3.20")
-        .withMountedFile(`/in/${inputName}`, file)
-        .withExec([
-          "sh",
-          "-c",
-          [
-            "set -euo pipefail",
-            `sha256sum "/in/${inputName}" | cut -d" " -f1`,
-          ].join("\n"),
-        ])
-        .stdout()
-    ).trim();
+    const sha = await hashFile(file);
 
     const filename = ext ? `${sha}.${ext}` : sha;
 
     const outDir = dag.directory().withFile(filename, file);
     return { file: outDir.file(filename), filename, sha };
+  }
+
+  /**
+   * Build a deterministic hash for a function call from pre-hashed string args.
+   */
+  private async hashArgs(
+    functionName: string,
+    ...args: string[]
+  ): Promise<string> {
+    const payload = JSON.stringify(args);
+    return `${functionName}-${createHash("sha256")
+      .update(payload)
+      .digest("hex")}`;
   }
 }
