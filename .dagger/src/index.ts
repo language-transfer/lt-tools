@@ -286,7 +286,7 @@ export class LtTools {
   private async lowQualityTrack(
     materializedCacheDir: Directory,
     file: File
-  ): Promise<WithUpdatedCache<File>> {
+  ): Promise<WithUpdatedCache<FileWithPointer>> {
     const cacheKey = `cache-${await this.hashArgs(
       "lowQualityTrack",
       await hashFile(file)
@@ -294,7 +294,7 @@ export class LtTools {
     const cached = materializedCacheDir.file(cacheKey);
     if (await fileExists(cached)) {
       return {
-        item: cached,
+        item: await withFilePointer(cached.withName("lq.mp4")),
         cacheDirectory: materializedCacheDir,
       };
     }
@@ -340,7 +340,7 @@ export class LtTools {
     );
 
     return {
-      item: container.file(outputPath),
+      item: await withFilePointer(container.file(outputPath)),
       cacheDirectory: updatedCacheDir,
     };
   }
@@ -370,7 +370,7 @@ export class LtTools {
     updatedCacheDir = lowQualityTrack.cacheDirectory;
 
     return {
-      item: await withFilePointer(lowQualityTrack.item),
+      item: lowQualityTrack.item,
       cacheDirectory: updatedCacheDir,
     };
   }
@@ -459,6 +459,20 @@ export class LtTools {
     return cacheDirectory;
   }
 
+  @func()
+  async buildCoursePackageCache(
+    materializedCacheDir: Directory,
+    core: Directory,
+    courseId: string
+  ): Promise<Directory> {
+    const { cacheDirectory } = await this.buildCoursePackage(
+      materializedCacheDir,
+      core,
+      courseId
+    );
+    return cacheDirectory;
+  }
+
   /**
    * Helpers
    */
@@ -518,7 +532,7 @@ export class LtTools {
       .file(trackName);
   }
 
-  private async buildCoursePackage(
+  async buildCoursePackage(
     materializedCacheDir: Directory,
     core: Directory,
     courseId: string
