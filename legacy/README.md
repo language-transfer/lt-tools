@@ -23,3 +23,5 @@ run node create-meta-versions.mjs <version> (no need to modify. do increment ver
 check https://language-transfer.us-east-1.linodeobjects.com/course-versions.json
 try it in the app
 ```
+
+fetch_tracks.py was briefly introduced to convert to the new system by downloading tracks from the existing R2 bucket

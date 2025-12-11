@@ -244,21 +244,6 @@ export class LtTools {
   }
 
   /**
-   * Get file size in bytes.
-   */
-  private async fileSize(file: File): Promise<number> {
-    const inputName = await file.name();
-    const size = await dag
-      .container()
-      .from("alpine:3.20")
-      .withMountedFile(`/in/${inputName}`, file)
-      .withExec(["stat", "-c", "%s", `/in/${inputName}`])
-      .stdout();
-
-    return Number(size.trim());
-  }
-
-  /**
    * Get media duration in seconds using ffprobe.
    */
   private async fileDurationSeconds(file: File): Promise<number> {
@@ -395,7 +380,8 @@ export class LtTools {
    */
   private async packageAllCoursesInner(
     materializedCacheDir: Directory,
-    core: Directory
+    core: Directory,
+    baseUrl: string = "https://downloads.languagetransfer.org/cas"
   ): Promise<WithUpdatedCache<Directory>> {
     let updatedCacheDir = materializedCacheDir;
 
@@ -430,6 +416,7 @@ export class LtTools {
 
     const allCourses = {
       buildVersion: BUILD_VERSION,
+      caseBaseURL: baseUrl,
       courses: coursesIndex,
     };
 
@@ -447,11 +434,13 @@ export class LtTools {
   @func()
   async packageAllCourses(
     materializedCacheDir: Directory,
-    core: Directory
+    core: Directory,
+    baseUrl: string = "https://downloads.languagetransfer.org/cas"
   ): Promise<Directory> {
     const { item } = await this.packageAllCoursesInner(
       materializedCacheDir,
-      core
+      core,
+      baseUrl
     );
     return item;
   }
@@ -459,11 +448,13 @@ export class LtTools {
   @func()
   async packageAllCoursesCache(
     materializedCacheDir: Directory,
-    core: Directory
+    core: Directory,
+    baseUrl: string = "https://downloads.languagetransfer.org/cas"
   ): Promise<Directory> {
     const { cacheDirectory } = await this.packageAllCoursesInner(
       materializedCacheDir,
-      core
+      core,
+      baseUrl
     );
     return cacheDirectory;
   }
