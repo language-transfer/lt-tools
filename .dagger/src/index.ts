@@ -529,8 +529,6 @@ export class LtTools {
       lessonCount: number;
     }>
   > {
-    let updatedCacheDir = materializedCacheDir;
-
     const tracks = await this.getCourseTrackList(core, courseId);
     const lessonsMeta: Array<{
       id: string;
@@ -543,24 +541,46 @@ export class LtTools {
     }> = [];
     const assets: Array<File> = [];
 
+    const promises = [];
+
     for (let i = 0; i < tracks.length; i++) {
-      const hq = await this.remuxLesson(updatedCacheDir, core, courseId, i);
-      updatedCacheDir = hq.cacheDirectory;
-      const lq = await this.lowQualityLesson(
-        updatedCacheDir,
-        core,
-        courseId,
-        i
-      );
-      updatedCacheDir = lq.cacheDirectory;
+      const promise = (async () => {
+        let updatedCacheDir = materializedCacheDir;
+        const hq = await this.remuxLesson(updatedCacheDir, core, courseId, i);
+        updatedCacheDir = hq.cacheDirectory;
+        const lq = await this.lowQualityLesson(
+          updatedCacheDir,
+          core,
+          courseId,
+          i
+        );
+        updatedCacheDir = lq.cacheDirectory;
 
-      assets.push(hq.item.file, lq.item.file);
+        assets.push(hq.item.file, lq.item.file);
 
-      const duration = await this.fileDurationSeconds(hq.item.file);
+        const duration = await this.fileDurationSeconds(hq.item.file);
 
-      const lessonId = this.getLessonId(courseId, i);
-      const title = `Lesson ${i + 1}`;
+        const lessonId = this.getLessonId(courseId, i);
+        const title = `Lesson ${i + 1}`;
 
+        return { lessonId, title, lq, hq, duration, updatedCacheDir };
+      })();
+      promises.push(promise);
+    }
+
+    const lessons = await Promise.all(promises);
+
+    let updatedCacheDir = materializedCacheDir;
+
+    for (let i = 0; i < tracks.length; i++) {
+      const {
+        lessonId,
+        title,
+        lq,
+        hq,
+        duration,
+        updatedCacheDir: lessonCacheDir,
+      } = lessons[i];
       lessonsMeta.push({
         id: lessonId,
         title,
@@ -570,6 +590,9 @@ export class LtTools {
         },
         duration,
       });
+
+      const cacheDirChanges = lessonCacheDir.changes(materializedCacheDir);
+      updatedCacheDir = updatedCacheDir.withChanges(cacheDirChanges);
     }
 
     const meta = {
