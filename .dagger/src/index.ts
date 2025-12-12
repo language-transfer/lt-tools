@@ -16,6 +16,11 @@
 import { dag, Directory, File, object, func } from "@dagger.io/dagger";
 import { createHash } from "crypto";
 
+import pLimit from "p-limit";
+
+// without this, the full build at some point just hangs or crashes, deadlocks, who knows
+const promiseLimit = pLimit(4);
+
 const BUILD_VERSION = 2;
 
 type FilePointer = {
@@ -46,6 +51,9 @@ async function hashFile(file: File): Promise<string> {
     ])
     .stdout();
   return hash.trim();
+  // idk something's wrong with file.contents(), it returns a string and something is wonky
+  // const fileContents = await file.contents()
+  // return createHash("sha256").update(fileContents).digest("hex");
 }
 
 async function hashDirectory(directory: Directory): Promise<string> {
@@ -394,7 +402,7 @@ export class LtTools {
     }> = [];
 
     for (const courseId of courses) {
-      const pkg = await this.buildCoursePackage(
+      const pkg = await this.buildCoursePackageInner(
         updatedCacheDir,
         core,
         courseId
@@ -460,12 +468,29 @@ export class LtTools {
   }
 
   @func()
+  async buildCoursePackage(
+    materializedCacheDir: Directory,
+    core: Directory,
+    courseId: string
+  ): Promise<Directory> {
+    const { item } = await this.buildCoursePackageInner(
+      materializedCacheDir,
+      core,
+      courseId
+    );
+    return dag
+      .directory()
+      .withFiles(".", item.assets)
+      .withFile(".", item.metaFile.file);
+  }
+
+  @func()
   async buildCoursePackageCache(
     materializedCacheDir: Directory,
     core: Directory,
     courseId: string
   ): Promise<Directory> {
-    const { cacheDirectory } = await this.buildCoursePackage(
+    const { cacheDirectory } = await this.buildCoursePackageInner(
       materializedCacheDir,
       core,
       courseId
@@ -532,7 +557,7 @@ export class LtTools {
       .file(trackName);
   }
 
-  async buildCoursePackage(
+  async buildCoursePackageInner(
     materializedCacheDir: Directory,
     core: Directory,
     courseId: string
@@ -558,7 +583,7 @@ export class LtTools {
     const promises = [];
 
     for (let i = 0; i < tracks.length; i++) {
-      const promise = (async () => {
+      const promise = promiseLimit(async () => {
         let updatedCacheDir = materializedCacheDir;
         const hq = await this.remuxLesson(updatedCacheDir, core, courseId, i);
         updatedCacheDir = hq.cacheDirectory;
@@ -578,7 +603,7 @@ export class LtTools {
         const title = `Lesson ${i + 1}`;
 
         return { lessonId, title, lq, hq, duration, updatedCacheDir };
-      })();
+      });
       promises.push(promise);
     }
 

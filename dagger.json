@@ -1,6 +1,6 @@
 {
   "name": "lt-tools",
-  "engineVersion": "v0.19.8",
+  "engineVersion": "v0.19.6",
   "sdk": {
     "source": "typescript"
   },
