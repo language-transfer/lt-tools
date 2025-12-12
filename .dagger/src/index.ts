@@ -19,7 +19,7 @@ import { createHash } from "crypto";
 import pLimit from "p-limit";
 
 // without this, the full build at some point just hangs or crashes, deadlocks, who knows
-const promiseLimit = pLimit(4);
+const promiseLimit = pLimit(8);
 
 const BUILD_VERSION = 2;
 
@@ -76,13 +76,23 @@ async function hashDirectory(directory: Directory): Promise<string> {
   return hash.trim();
 }
 
-async function fileExists(file: File): Promise<boolean> {
-  try {
-    await file.id();
-    return true;
-  } catch {
-    return false;
+async function getCachedFile(
+  materializedCacheDir: Directory,
+  cacheKey: string
+): Promise<File | null> {
+  if (await materializedCacheDir.exists(cacheKey)) {
+    return materializedCacheDir.file(cacheKey);
+  } else {
+    return null;
   }
+}
+
+// common pattern when trying to avoid massive directories.
+// dagger chokes on the export if we don't do this (probably related to docker's 500-layer limit)
+async function placeObject(outDir: Directory, object: File) {
+  const objectName = await object.name();
+  const [prefix, rest] = [objectName.slice(0, 2), objectName.slice(2)];
+  return outDir.withDirectory(prefix, dag.directory().withFile(rest, object));
 }
 
 const MIME_TYPE_MAP = {
@@ -116,7 +126,7 @@ async function withFilePointer(file: File): Promise<FileWithPointer> {
 
 type WithUpdatedCache<T> = {
   item: T;
-  cacheDirectory: Directory;
+  cacheWrites: Record<string, File>;
 };
 
 @object()
@@ -192,11 +202,11 @@ export class LtTools {
       "remux",
       await hashFile(input)
     )}`;
-    const cachedFile = materializedCacheDir.file(cacheKey);
-    if (await fileExists(cachedFile)) {
+    const cachedFile = await getCachedFile(materializedCacheDir, cacheKey);
+    if (cachedFile !== null) {
       return {
         item: await withFilePointer(cachedFile.withName("output.mp4")),
-        cacheDirectory: materializedCacheDir,
+        cacheWrites: {},
       };
     }
 
@@ -247,7 +257,9 @@ export class LtTools {
 
     return {
       item: file,
-      cacheDirectory: updatedCacheDir,
+      cacheWrites: {
+        [cacheKey]: container.file(outputPath).withName(cacheKey),
+      },
     };
   }
 
@@ -299,11 +311,11 @@ export class LtTools {
       "lowQualityTrack",
       await hashFile(file)
     )}`;
-    const cached = materializedCacheDir.file(cacheKey);
-    if (await fileExists(cached)) {
+    const cached = await getCachedFile(materializedCacheDir, cacheKey);
+    if (cached !== null) {
       return {
         item: await withFilePointer(cached.withName("lq.mp4")),
-        cacheDirectory: materializedCacheDir,
+        cacheWrites: {},
       };
     }
 
@@ -349,7 +361,9 @@ export class LtTools {
 
     return {
       item: await withFilePointer(container.file(outputPath)),
-      cacheDirectory: updatedCacheDir,
+      cacheWrites: {
+        [cacheKey]: container.file(outputPath).withName(cacheKey),
+      },
     };
   }
 
@@ -362,24 +376,24 @@ export class LtTools {
     courseId: string,
     lesson: number
   ): Promise<WithUpdatedCache<FileWithPointer>> {
-    let updatedCacheDir = materializedCacheDir;
+    const cacheWrites = {};
     const remuxed = await this.remuxLesson(
-      updatedCacheDir,
+      materializedCacheDir,
       core,
       courseId,
       lesson
     );
-    updatedCacheDir = remuxed.cacheDirectory;
-
     const lowQualityTrack = await this.lowQualityTrack(
       materializedCacheDir,
       remuxed.item.file
     );
-    updatedCacheDir = lowQualityTrack.cacheDirectory;
+
+    Object.assign(cacheWrites, remuxed.cacheWrites);
+    Object.assign(cacheWrites, lowQualityTrack.cacheWrites);
 
     return {
       item: lowQualityTrack.item,
-      cacheDirectory: updatedCacheDir,
+      cacheWrites,
     };
   }
 
@@ -391,8 +405,6 @@ export class LtTools {
     core: Directory,
     baseUrl: string = "https://downloads.languagetransfer.org/cas"
   ): Promise<WithUpdatedCache<Directory>> {
-    let updatedCacheDir = materializedCacheDir;
-
     const courses = await this.getCoreCourseIds(core);
     let outDir = dag.directory();
     const coursesIndex: Array<{
@@ -401,19 +413,21 @@ export class LtTools {
       lessons: number;
     }> = [];
 
+    const cacheWrites = {};
+
     for (const courseId of courses) {
       const pkg = await this.buildCoursePackageInner(
-        updatedCacheDir,
+        materializedCacheDir,
         core,
         courseId
       );
-      updatedCacheDir = pkg.cacheDirectory;
+      Object.assign(cacheWrites, pkg.cacheWrites);
 
       for (const asset of pkg.item.assets) {
-        outDir = outDir.withFile(".", asset);
+        outDir = await placeObject(outDir, asset);
       }
 
-      outDir = outDir.withFile(".", pkg.item.metaFile.file);
+      outDir = await placeObject(outDir, pkg.item.metaFile.file);
 
       coursesIndex.push({
         id: courseId,
@@ -435,7 +449,7 @@ export class LtTools {
 
     return {
       item: outDir,
-      cacheDirectory: updatedCacheDir,
+      cacheWrites,
     };
   }
 
@@ -459,12 +473,12 @@ export class LtTools {
     core: Directory,
     baseUrl: string = "https://downloads.languagetransfer.org/cas"
   ): Promise<Directory> {
-    const { cacheDirectory } = await this.packageAllCoursesInner(
+    const { cacheWrites } = await this.packageAllCoursesInner(
       materializedCacheDir,
       core,
       baseUrl
     );
-    return cacheDirectory;
+    return dag.directory().withFiles(".", Object.values(cacheWrites));
   }
 
   @func()
@@ -490,12 +504,12 @@ export class LtTools {
     core: Directory,
     courseId: string
   ): Promise<Directory> {
-    const { cacheDirectory } = await this.buildCoursePackageInner(
+    const { cacheWrites } = await this.buildCoursePackageInner(
       materializedCacheDir,
       core,
       courseId
     );
-    return cacheDirectory;
+    return dag.directory().withFiles(".", Object.values(cacheWrites));
   }
 
   /**
@@ -581,19 +595,25 @@ export class LtTools {
     const assets: Array<File> = [];
 
     const promises = [];
+    const cacheWrites: Record<string, File> = {};
 
     for (let i = 0; i < tracks.length; i++) {
       const promise = promiseLimit(async () => {
-        let updatedCacheDir = materializedCacheDir;
-        const hq = await this.remuxLesson(updatedCacheDir, core, courseId, i);
-        updatedCacheDir = hq.cacheDirectory;
-        const lq = await this.lowQualityLesson(
-          updatedCacheDir,
+        const hq = await this.remuxLesson(
+          materializedCacheDir,
           core,
           courseId,
           i
         );
-        updatedCacheDir = lq.cacheDirectory;
+        const lq = await this.lowQualityLesson(
+          materializedCacheDir,
+          core,
+          courseId,
+          i
+        );
+
+        Object.assign(cacheWrites, hq.cacheWrites);
+        Object.assign(cacheWrites, lq.cacheWrites);
 
         assets.push(hq.item.file, lq.item.file);
 
@@ -602,24 +622,15 @@ export class LtTools {
         const lessonId = this.getLessonId(courseId, i);
         const title = `Lesson ${i + 1}`;
 
-        return { lessonId, title, lq, hq, duration, updatedCacheDir };
+        return { lessonId, title, lq, hq, duration, cacheWrites };
       });
       promises.push(promise);
     }
 
     const lessons = await Promise.all(promises);
 
-    let updatedCacheDir = materializedCacheDir;
-
     for (let i = 0; i < tracks.length; i++) {
-      const {
-        lessonId,
-        title,
-        lq,
-        hq,
-        duration,
-        updatedCacheDir: lessonCacheDir,
-      } = lessons[i];
+      const { lessonId, title, lq, hq, duration, cacheWrites } = lessons[i];
       lessonsMeta.push({
         id: lessonId,
         title,
@@ -629,9 +640,6 @@ export class LtTools {
         },
         duration,
       });
-
-      const cacheDirChanges = lessonCacheDir.changes(materializedCacheDir);
-      updatedCacheDir = updatedCacheDir.withChanges(cacheDirChanges);
     }
 
     const meta = {
@@ -651,7 +659,7 @@ export class LtTools {
         metaFile: await withFilePointer(metaFile),
         lessonCount: tracks.length,
       },
-      cacheDirectory: updatedCacheDir,
+      cacheWrites,
     };
   }
 
