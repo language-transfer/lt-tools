@@ -438,7 +438,7 @@ export class LtTools {
 
     const allCourses = {
       buildVersion: BUILD_VERSION,
-      caseBaseURL: baseUrl,
+      casBaseURL: baseUrl,
       courses: coursesIndex,
     };
 
