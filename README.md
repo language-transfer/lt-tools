@@ -16,3 +16,11 @@ Before or after building, run ./build-cache.sh; this will materialize the cached
 
 
 data/courses $ rclone copy . lt-r2:lt-app-cas/ --ignore-existing
+
+Content-addressed layout
+-------------------------------------------
+- Build output is a flat CAS rooted at a base URL (defaults to https://downloads.languagetransfer.org/cas). Objects are named by SHA-256; internal storage layout is `<prefix>/<rest>` where `prefix` is the first 2 hex chars and `rest` is the remaining 62. Server responses are `application/octet-stream`; clients should rely on the pointer metadata for the real MIME (`mp4` or `json`).
+- `all-courses.json` sits at the CAS root (not hashed) and is the entry point: `{ buildVersion: 2, casBaseURL, courses: [ { id, meta, lessons } ] }`. `meta` is a file pointer.
+- File pointers: fields `{ _type: "file", object: string, filesize: number, mimeType: string }` where `object` is the SHA-256 string (no slashes). Consumers fetch at `${casBaseURL}/${object}` and infer MIME from the pointer. Requests should use the full SHA-256 hash; this will be redirected to prefix/hash
+- Per-course meta files live in CAS under their hash and should be interpreted as JSON. Shape: `{ buildVersion: 2, lessons: [ { id, title, duration, variants: { hq: FilePointer, lq: FilePointer } } ] }`. Lesson `id` is `<courseId><index+1>`, titles default to `Lesson N`.
+- Media pipeline: each lesson track from `data/core/courses/<id>/tracks` is remuxed to metadata-free HQ mp4 and transcoded to LQ AAC mono mp4; both variants are hashed, placed in CAS, and referenced from the course meta.
