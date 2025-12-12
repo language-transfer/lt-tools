@@ -1,28 +1,29 @@
-# Repository Guidelines
+# Repository Briefing
 
-## Project Structure & Module Organization
-- `data/core`: source course assets consumed by delivery apps.
-- `data/core-integrity`: generated `.meta.sha256` checksums mirroring `data/core`; kept in repo for verification.
-- `.dagger/`: TypeScript Dagger module (`src/index.ts`, `tsconfig.json`, `yarn.lock`) powering integrity tooling; install dependencies inside this subdirectory.
-- Root scripts: `create-core-integrity-data.sh` and `check-core-integrity.sh` wrap the Dagger functions for generating and validating checksums.
-- `legacy/`: older Node utilities for audio upload/metadata (`transcode.js`, `gen-meta.js`, `prepare-zip.js`, `create-meta-versions.mjs`); see `legacy/README.md` for the release flow.
+## Data & Layout
+- `data/core` is the 5–10GB canonical course data; it is not in git. Integrity snapshots live in `data/core-integrity` as `.meta.sha256` mirrors and should be regenerated whenever `data/core` changes.
+- Course lists come from `data/core/list.txt`; each course has `courses/<id>/list.txt` plus `tracks/` media.
+- Outputs are content-addressed: assets are renamed to their SHA-256 hash and stored under a two-character prefix directory; `all-courses.json` is the stable index that points at those hashes.
 
-## Build, Test, and Development Commands
-- `yarn install --cwd .dagger` (or `npm install --prefix .dagger`) to set up Dagger TypeScript dependencies.
-- `./create-core-integrity-data.sh` to regenerate checksums in `data/core-integrity` from `data/core`.
-- `./check-core-integrity.sh` to verify `data/core` matches stored checksums; run after modifying assets or integrity data.
-- Direct Dagger usage: `dagger call core-integrity --core data/core --output data/core-integrity` and `dagger call verify-core-integrity --core data/core --integrity data/core-integrity` for CI or debugging.
+## Dagger Module (`.dagger/src/index.ts`)
+- Core integrity helpers: `coreIntegrity(core)` builds the `.meta.sha256` tree; `verifyCoreIntegrity(core, integrity)` diffs expected vs. stored and prints `core integrity OK` on success.
+- Packaging pipeline (p-limit to 8 concurrent operations):
+  - Remux each lesson via pinned `ghcr.io/jrottenberg/ffmpeg:8.0-alpine` to metadata-free MP4 (`remuxLesson`/`remuxToMp4`); durations are read with `ffprobe`.
+  - Low-quality AAC mono variant per lesson (`lowQualityLesson`/`lowQualityTrack`).
+  - Metadata files (`<course>-meta.json` and `all-courses.json`) include `buildVersion` (currently 2), lesson durations, and file pointers `{object, filesize, mimeType}`; only `mp4` and `json` MIME types are allowed.
+  - Caching is explicit: pass a writable `materializedCacheDir`; cache keys are hashed per operation and returned by the `*Cache` functions (`packageAllCoursesCache`, `buildCoursePackageCache`) to persist between runs.
+- Public Dagger functions for consumers: package a single course (`buildCoursePackage`) or all courses (`packageAllCourses`), plus their cache-writer counterparts; `baseUrl` defaults to `https://downloads.languagetransfer.org/cas`.
 
-## Coding Style & Naming Conventions
-- TypeScript: ES modules, 2-space indentation, prefer `const`/`async` with camelCase function names (`coreIntegrity`, `verifyCoreIntegrity`); keep Dagger functions side-effect free and deterministic.
-- Bash: include `#!/usr/bin/env bash` and `set -euo pipefail`; scripts assume execution from repo root (`cd "$(dirname "$0")"` pattern).
-- Data: `.meta.sha256` files should mirror asset paths exactly; avoid renaming assets without regenerating integrity data.
+## Scripts & Commands
+- Install Dagger deps inside `.dagger`: `yarn install --cwd .dagger`.
+- Integrity: `./create-core-integrity-data.sh` regenerates checksums; `./check-core-integrity.sh` verifies `data/core` vs `data/core-integrity`.
+- Builds: `./build.sh` produces the full CAS dump; `./build-cache.sh` materializes cached steps. Language-scoped variants (`build-for-language.sh`, `build-cache-for-language.sh`) exist for partial runs.
 
-## Testing Guidelines
-- No formal unit suite; integrity verification is the primary check.
-- After changing assets or Dagger logic, run `./check-core-integrity.sh` and confirm it ends with `core integrity OK`.
-- For legacy flows, dry-run Node scripts locally and validate generated `*-meta.json` before uploading.
+## Conventions
+- TypeScript: ESM, 2-space indent, deterministic/pure Dagger functions; keep MIME map/pointer shapes consistent.
+- Bash scripts start with `#!/usr/bin/env bash`, use `set -euo pipefail`, and assume repo root (`cd "$(dirname "$0")"`).
+- `.meta.sha256` files must mirror asset paths exactly; regenerate after any asset rename or addition.
 
-## Commit & Pull Request Guidelines
-- Commit messages stay short and descriptive (history uses concise sentence-case summaries like `Create README.md`).
-- PRs should describe scope, impacted assets/scripts, and commands run (especially integrity checks). Link related issues and include sample outputs or screenshots when touching metadata or delivery paths.
+## Validation
+- After modifying assets or Dagger logic, run `./check-core-integrity.sh` and expect `core integrity OK`.
+- When changing packaging behavior, consider running `dagger call packageAllCourses --core data/core --materialized-cache-dir <dir>` plus the corresponding `*Cache` call to refresh cache artifacts.
