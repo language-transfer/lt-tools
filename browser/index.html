@@ -376,10 +376,12 @@
     <script>
       const state = {
         baseUrl: "",
+        objectBaseUrl: "",
         catalog: null,
         courseMetas: new Map(),
         selectedCourse: null,
         audioQuality: "hq",
+        usePrefixSplit: false,
       };
 
       const els = {
@@ -406,6 +408,15 @@
         return url.replace(/\/+$/, "");
       }
 
+      function isLocalhostUrl(url) {
+        try {
+          const host = new URL(url).hostname;
+          return ["localhost", "127.0.0.1", "::1", "[::1]"].includes(host);
+        } catch (_err) {
+          return false;
+        }
+      }
+
       function setStatus(message, type = "info") {
         els.status.textContent = message;
         els.status.className = "status";
@@ -418,12 +429,21 @@
           throw new Error("Missing pointer information");
         }
         const object = pointer.object.trim();
-        if (object.length < 3) {
+        if (!object.length) {
           throw new Error("Pointer object string is too short");
         }
-        const prefix = object.slice(0, 2);
-        const rest = object.slice(2);
-        return `${state.baseUrl}/${prefix}/${rest}`;
+
+        const base = state.objectBaseUrl || state.baseUrl;
+        if (state.usePrefixSplit) {
+          if (object.length < 3) {
+            throw new Error("Pointer object string is too short");
+          }
+          const prefix = object.slice(0, 2);
+          const rest = object.slice(2);
+          return `${base}/${prefix}/${rest}`;
+        }
+
+        return `${base}/${object}`;
       }
 
       function formatDuration(seconds) {
@@ -547,9 +567,12 @@
 
       async function loadCatalog(baseUrl) {
         state.baseUrl = normalizeBase(baseUrl);
+        state.objectBaseUrl = state.baseUrl;
+        state.usePrefixSplit = isLocalhostUrl(state.baseUrl);
         state.catalog = null;
         state.courseMetas.clear();
         state.selectedCourse = null;
+        state.objectBaseUrl = state.baseUrl;
         renderCourses();
         renderLessons(null);
         els.loadedBase.textContent = state.baseUrl || "—";
@@ -560,6 +583,10 @@
           const catalogUrl = `${state.baseUrl}/all-courses.json`;
           const data = await fetchJson(catalogUrl);
           state.catalog = data;
+          const catalogCasBase = data.casBaseURL ? normalizeBase(data.casBaseURL) : null;
+          if (!state.usePrefixSplit && catalogCasBase) {
+            state.objectBaseUrl = catalogCasBase;
+          }
           els.loadedBase.textContent = state.baseUrl;
           if (typeof data.buildVersion !== "undefined") {
             els.buildVersionPill.hidden = false;
@@ -630,6 +657,8 @@
         state.catalog = null;
         state.courseMetas.clear();
         state.selectedCourse = null;
+        state.objectBaseUrl = "";
+        state.usePrefixSplit = false;
         els.baseInput.value = "";
         els.loadedBase.textContent = "—";
         els.buildVersionPill.hidden = true;

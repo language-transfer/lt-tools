@@ -13,3 +13,6 @@ Not all steps will be deterministic. We mostly use the Dagger cache to keep remu
 Before or after building, run ./build-cache.sh; this will materialize the cached steps in a directory (taking some multiple of the rest of the `data/` dir). This should run reasonably quickly if you've built already and the Dagger cache is big enough to store intermediate steps. If not, it'd be good to run `./build.sh` after building the cache (which should be reasonably quick), since this will actually write the cached results to disk outside the Dagger cache, and those results will be used instead of re-transcoding from scratch, even if the cache is pruned. We essentially have our own 'shadow cache' running in parallel that will survive Dagger evictions.
 
 `build-for-language.sh` and `build-cache-for-language.sh` shouldn't be necessary, though they can help if you want to test a smaller subset of the data. I wrote these scripts when I was worried I wouldn't get Dagger to behave when building everything at once; it wasn't working great, for a while there.
+
+
+data/courses $ rclone copy . lt-r2:lt-app-cas/ --ignore-existing
