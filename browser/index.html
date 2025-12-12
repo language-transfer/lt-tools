@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Language Transfer Course Browser</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap");
+
+      :root {
+        --bg: #0f172a;
+        --panel: rgba(255, 255, 255, 0.06);
+        --panel-strong: rgba(255, 255, 255, 0.12);
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #f97316;
+        --accent-strong: #fb8a2c;
+        --line: rgba(148, 163, 184, 0.2);
+        --success: #10b981;
+        --danger: #f43f5e;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        background: radial-gradient(circle at 20% 20%, #1e293b 0, transparent 35%),
+          radial-gradient(circle at 80% 0, #0ea5e9 0, transparent 30%),
+          linear-gradient(135deg, #0b1021 0%, #0f172a 50%, #0b1021 100%);
+        font-family: "Space Grotesk", "Segoe UI", "Helvetica Neue", sans-serif;
+        padding: 32px;
+      }
+
+      h1 {
+        font-weight: 600;
+        margin: 0 0 8px;
+        letter-spacing: -0.02em;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .app {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      header {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 18px 20px;
+        backdrop-filter: blur(6px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 14px;
+      }
+
+      label {
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      input[type="url"] {
+        background: var(--panel-strong);
+        border: 1px solid var(--line);
+        color: var(--text);
+        padding: 12px 14px;
+        border-radius: 12px;
+        min-width: 280px;
+        font-size: 15px;
+        outline: none;
+        transition: border-color 0.2s ease, transform 0.2s ease;
+      }
+
+      input[type="url"]:focus {
+        border-color: var(--accent);
+        transform: translateY(-1px);
+      }
+
+      button {
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        color: #ffffff;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 18px;
+        font-weight: 600;
+        font-size: 16px;
+        letter-spacing: 0.01em;
+        cursor: pointer;
+        box-shadow: 0 12px 30px rgba(251, 138, 44, 0.35);
+        transition: transform 0.15s ease, box-shadow 0.2s ease;
+      }
+
+      button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 16px 36px rgba(251, 138, 44, 0.4);
+      }
+
+      button.secondary {
+        background: transparent;
+        border: 1px solid var(--line);
+        color: #ffffff;
+        box-shadow: none;
+      }
+
+      .status {
+        margin-top: 8px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+
+      .status strong {
+        color: var(--text);
+      }
+
+      .status.ok {
+        color: var(--success);
+      }
+
+      .status.error {
+        color: var(--danger);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1.2fr;
+        gap: 16px;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        min-height: 420px;
+        backdrop-filter: blur(8px);
+      }
+
+      .panel h2 {
+        margin: 0;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        color: #ffffff;
+        font-size: 26px;
+      }
+
+      .hint {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .course-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+
+      .course-card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        transition: transform 0.12s ease, border-color 0.12s ease,
+          background 0.12s ease;
+      }
+
+      .course-card:hover {
+        transform: translateY(-1px);
+        border-color: var(--accent);
+      }
+
+      .course-card.active {
+        border-color: var(--accent);
+        background: rgba(249, 115, 22, 0.08);
+      }
+
+      .course-card span {
+        display: block;
+      }
+
+      .badge {
+        background: var(--panel-strong);
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        color: var(--muted);
+        border: 1px solid var(--line);
+      }
+
+      .course-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .quality-toggle {
+        display: inline-flex;
+        gap: 8px;
+        padding: 6px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.03);
+      }
+
+      .quality-toggle button {
+        padding: 8px 12px;
+        box-shadow: none;
+        border-radius: 10px;
+        background: transparent;
+        color: var(--text);
+        border: none;
+      }
+
+      .quality-toggle button.active {
+        background: var(--panel-strong);
+        border: 1px solid var(--accent);
+        color: var(--accent-strong);
+      }
+
+      .lessons {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .lesson-card {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.03);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .lesson-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 10px;
+      }
+
+      .lesson-top h3 {
+        margin: 0;
+        font-size: 15px;
+      }
+
+      .duration {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      audio {
+        width: 100%;
+      }
+
+      .empty-state {
+        text-align: center;
+        color: var(--muted);
+        border: 1px dashed var(--line);
+        padding: 24px 16px;
+        border-radius: 12px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--line);
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .pill strong {
+        color: var(--text);
+      }
+
+      @media (max-width: 960px) {
+        body {
+          padding: 20px;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .panel {
+          min-height: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <h1>Course Browser</h1>
+        <p>Point this at a hosted <code>data/courses</code> root to explore and play lessons.</p>
+        <form id="baseForm" class="controls">
+          <div style="display: flex; flex-direction: column; gap: 6px; flex: 1">
+            <label for="baseUrl">Course root URL</label>
+            <input
+              id="baseUrl"
+              type="url"
+              name="baseUrl"
+              placeholder="https://example.com/courses"
+              required
+              autocomplete="off"
+            />
+          </div>
+          <div style="display: flex; align-items: flex-end; gap: 10px">
+            <button type="submit" aria-label="Load courses">Load catalog</button>
+            <button id="resetBtn" type="button" class="secondary" aria-label="Reset state">
+              Reset
+            </button>
+          </div>
+        </form>
+        <div id="status" class="status">Waiting for a base URL.</div>
+      </header>
+
+      <div class="grid">
+        <section class="panel">
+          <div class="course-header">
+            <div>
+              <h2>Courses</h2>
+              <div class="hint">Loaded from <span id="loadedBase">—</span></div>
+            </div>
+            <div id="buildVersion" class="pill" hidden>
+              build <strong id="buildNumber"></strong>
+            </div>
+          </div>
+          <div id="courses" class="course-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="course-header">
+            <div>
+              <h2 id="courseTitle">Pick a course to view lessons</h2>
+              <div class="hint" id="courseSubtitle">Meta will load on demand.</div>
+            </div>
+            <div class="quality-toggle" role="group" aria-label="Audio quality">
+              <button type="button" data-quality="hq" class="active">HQ</button>
+              <button type="button" data-quality="lq">LQ</button>
+            </div>
+          </div>
+          <div id="lessons" class="lessons"></div>
+        </section>
+      </div>
+    </div>
+
+    <script>
+      const state = {
+        baseUrl: "",
+        catalog: null,
+        courseMetas: new Map(),
+        selectedCourse: null,
+        audioQuality: "hq",
+      };
+
+      const els = {
+        baseForm: document.getElementById("baseForm"),
+        baseInput: document.getElementById("baseUrl"),
+        resetBtn: document.getElementById("resetBtn"),
+        status: document.getElementById("status"),
+        courses: document.getElementById("courses"),
+        lessons: document.getElementById("lessons"),
+        loadedBase: document.getElementById("loadedBase"),
+        buildVersionPill: document.getElementById("buildVersion"),
+        buildNumber: document.getElementById("buildNumber"),
+        courseTitle: document.getElementById("courseTitle"),
+        courseSubtitle: document.getElementById("courseSubtitle"),
+        qualityButtons: document.querySelectorAll(".quality-toggle button"),
+      };
+
+      const placeholderCards = {
+        courses: '<div class="empty-state">No catalog loaded yet.</div>',
+        lessons: '<div class="empty-state">Select a course to see lessons.</div>',
+      };
+
+      function normalizeBase(url) {
+        return url.replace(/\/+$/, "");
+      }
+
+      function setStatus(message, type = "info") {
+        els.status.textContent = message;
+        els.status.className = "status";
+        if (type === "ok") els.status.classList.add("ok");
+        if (type === "error") els.status.classList.add("error");
+      }
+
+      function pointerToUrl(pointer) {
+        if (!pointer || !pointer.object) {
+          throw new Error("Missing pointer information");
+        }
+        const object = pointer.object.trim();
+        if (object.length < 3) {
+          throw new Error("Pointer object string is too short");
+        }
+        const prefix = object.slice(0, 2);
+        const rest = object.slice(2);
+        return `${state.baseUrl}/${prefix}/${rest}`;
+      }
+
+      function formatDuration(seconds) {
+        if (!Number.isFinite(seconds)) return "—";
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.round(seconds % 60)
+          .toString()
+          .padStart(2, "0");
+        return `${mins}:${secs}`;
+      }
+
+      function renderCourses() {
+        if (!state.catalog) {
+          els.courses.innerHTML = placeholderCards.courses;
+          return;
+        }
+
+        if (!state.catalog.courses?.length) {
+          els.courses.innerHTML =
+            '<div class="empty-state">Catalog is empty.</div>';
+          return;
+        }
+
+        els.courses.innerHTML = "";
+
+        state.catalog.courses.forEach((course) => {
+          const card = document.createElement("button");
+          card.type = "button";
+          card.className = "course-card";
+          if (course.id === state.selectedCourse) card.classList.add("active");
+          card.innerHTML = `
+            <span>
+              <strong>${course.id}</strong>
+              <span class="hint">Lessons: ${course.lessons}</span>
+            </span>
+            <span class="badge">meta ${course.meta.object.slice(0, 6)}…</span>
+          `;
+          card.addEventListener("click", () => selectCourse(course.id));
+          els.courses.appendChild(card);
+        });
+      }
+
+      function renderLessons(meta) {
+        if (!meta) {
+          els.lessons.innerHTML = placeholderCards.lessons;
+          return;
+        }
+
+        if (!meta.lessons?.length) {
+          els.lessons.innerHTML =
+            '<div class="empty-state">No lessons found for this course.</div>';
+          return;
+        }
+
+        els.lessons.innerHTML = "";
+
+        meta.lessons.forEach((lesson, idx) => {
+          const card = document.createElement("article");
+          card.className = "lesson-card";
+
+          const preferredVariant =
+            state.audioQuality === "hq" && lesson.variants.hq
+              ? "hq"
+              : lesson.variants.lq
+              ? "lq"
+              : null;
+
+          if (!preferredVariant) {
+            card.innerHTML = `
+              <div class="lesson-top">
+                <h3>${lesson.title || `Lesson ${idx + 1}`}</h3>
+              </div>
+              <div class="hint">No playable audio variants for this lesson.</div>
+            `;
+            els.lessons.appendChild(card);
+            return;
+          }
+
+          let audioUrl = "";
+          try {
+            audioUrl = pointerToUrl(lesson.variants[preferredVariant]);
+          } catch (err) {
+            card.innerHTML = `
+              <div class="lesson-top">
+                <h3>${lesson.title || `Lesson ${idx + 1}`}</h3>
+              </div>
+              <div class="hint">Could not build URL for this lesson.</div>
+            `;
+            els.lessons.appendChild(card);
+            return;
+          }
+
+          card.innerHTML = `
+            <div class="lesson-top">
+              <h3>${lesson.title || `Lesson ${idx + 1}`}</h3>
+              <span class="duration">${formatDuration(lesson.duration)}</span>
+            </div>
+            <div class="hint">${preferredVariant.toUpperCase()} · ${lesson.id}</div>
+          `;
+
+          const audio = document.createElement("audio");
+          audio.controls = true;
+          audio.preload = "none";
+          audio.src = audioUrl;
+          if (lesson.variants[preferredVariant].mimeType) {
+            audio.type = lesson.variants[preferredVariant].mimeType;
+          }
+
+          card.appendChild(audio);
+          els.lessons.appendChild(card);
+        });
+      }
+
+      async function fetchJson(url) {
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error(`Request failed with ${res.status}`);
+        }
+        return res.json();
+      }
+
+      async function loadCatalog(baseUrl) {
+        state.baseUrl = normalizeBase(baseUrl);
+        state.catalog = null;
+        state.courseMetas.clear();
+        state.selectedCourse = null;
+        renderCourses();
+        renderLessons(null);
+        els.loadedBase.textContent = state.baseUrl || "—";
+        els.buildVersionPill.hidden = true;
+        setStatus("Loading catalog…");
+
+        try {
+          const catalogUrl = `${state.baseUrl}/all-courses.json`;
+          const data = await fetchJson(catalogUrl);
+          state.catalog = data;
+          els.loadedBase.textContent = state.baseUrl;
+          if (typeof data.buildVersion !== "undefined") {
+            els.buildVersionPill.hidden = false;
+            els.buildNumber.textContent = data.buildVersion;
+          }
+          renderCourses();
+          setStatus("Catalog loaded.", "ok");
+        } catch (err) {
+          console.error(err);
+          setStatus(
+            `Failed to load catalog: ${err.message || "unexpected error"}`,
+            "error"
+          );
+          els.courses.innerHTML = placeholderCards.courses;
+        }
+      }
+
+      async function fetchCourseMeta(courseId) {
+        const course = state.catalog?.courses?.find((c) => c.id === courseId);
+        if (!course) {
+          throw new Error(`Course "${courseId}" not found in catalog`);
+        }
+        const metaUrl = pointerToUrl(course.meta);
+        return fetchJson(metaUrl);
+      }
+
+      async function selectCourse(courseId) {
+        if (!state.catalog) {
+          setStatus("Load a catalog first.", "error");
+          return;
+        }
+
+        if (state.selectedCourse === courseId && state.courseMetas.has(courseId)) {
+          renderCourses();
+          const meta = state.courseMetas.get(courseId);
+          els.courseTitle.textContent = courseId;
+          els.courseSubtitle.textContent = `Lessons: ${meta.lessons?.length ?? "?"}`;
+          renderLessons(meta);
+          return;
+        }
+
+        state.selectedCourse = courseId;
+        renderCourses();
+        els.courseTitle.textContent = courseId;
+        els.courseSubtitle.textContent = "Loading lesson metadata…";
+        els.lessons.innerHTML = '<div class="empty-state">Fetching meta…</div>';
+
+        try {
+          const meta = await fetchCourseMeta(courseId);
+          state.courseMetas.set(courseId, meta);
+          els.courseSubtitle.textContent = `Lessons: ${meta.lessons?.length ?? "?"}`;
+          renderLessons(meta);
+        } catch (err) {
+          console.error(err);
+          els.courseSubtitle.textContent = "Failed to load lesson metadata.";
+          els.lessons.innerHTML = `<div class="empty-state">Error: ${
+            err.message || "could not load meta"
+          }</div>`;
+          setStatus(
+            `Could not load ${courseId} meta: ${err.message || "unknown error"}`,
+            "error"
+          );
+        }
+      }
+
+      function resetApp() {
+        state.baseUrl = "";
+        state.catalog = null;
+        state.courseMetas.clear();
+        state.selectedCourse = null;
+        els.baseInput.value = "";
+        els.loadedBase.textContent = "—";
+        els.buildVersionPill.hidden = true;
+        els.courseTitle.textContent = "Pick a course to view lessons";
+        els.courseSubtitle.textContent = "Meta will load on demand.";
+        renderCourses();
+        renderLessons(null);
+        setStatus("Waiting for a base URL.");
+      }
+
+      function setQuality(quality) {
+        if (!["hq", "lq"].includes(quality)) return;
+        state.audioQuality = quality;
+        els.qualityButtons.forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.quality === quality);
+        });
+        if (state.selectedCourse && state.courseMetas.has(state.selectedCourse)) {
+          renderLessons(state.courseMetas.get(state.selectedCourse));
+        }
+      }
+
+      els.baseForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const url = els.baseInput.value.trim();
+        if (!url) return;
+        loadCatalog(url);
+      });
+
+      els.resetBtn.addEventListener("click", resetApp);
+
+      els.qualityButtons.forEach((btn) => {
+        btn.addEventListener("click", () => setQuality(btn.dataset.quality));
+      });
+
+      // Provide a sensible default when running from a local dev server.
+      if (window.location.origin !== "null") {
+        els.baseInput.placeholder = `${window.location.origin}/courses`;
+      }
+    </script>
+  </body>
+</html>
