@@ -2,7 +2,7 @@ Dagger
 
 `data/` houses all the data, both canonical and derived. Most of this is `.gitignore`d, except `*.meta.*` files, which generally contain SHA hashes.
 
-`data/core` is the canonical data. It's not stored in this repo, since it's ~5-10GB (it's also not available under the same license as the code). Once you have the core data, you can verify that it's the same as my copy by running `./check-core-integrity.sh`. If you need to update the core (e.g., to add files or swap files in/out), you can do that with `./create-core-integrity-data.sh`. Then, commit to this repo!
+`data/core` is the canonical data. It's not stored in this repo, since it's ~5-10GB (it's also not available under the same license as the code). Once you have the core data, you can verify that it's the same as my copy by running `./check-core-integrity.sh`. If you need to update the core (e.g., to add files or swap files in/out), you can do that with `./create-core-integrity-data.sh`. Best to check integtrity first, before making changes and overwriting. Then, commit to this repo!
 
 ./build.sh will build the full object storage dump that needs to go into a content-addressed bucket. It's probably good to append-only to buckets; don't delete old files, since they might still be referenced by someone's install somewhere.
 
@@ -23,4 +23,4 @@ Content-addressed layout
 - `all-courses.json` sits at https://downloads.languagetransfer.org/all-courses.json (filename not hashed) and is the entry point: `{ buildVersion: 2, casBaseURL: string, courses: [ { id: string, meta: FilePointer, lessons: number } ] }`.
 - File pointers: fields `{ _type: "file", object: string, filesize: number, mimeType: string }` where `object` is the SHA-256 string (no slashes). Consumers fetch at `${casBaseURL}/${object}` and infer MIME from the pointer. Requests should use the full SHA-256 hash; this will be redirected to prefix/hash
 - Per-course meta files live in CAS under their hash and should be interpreted as JSON. Shape: `{ buildVersion: 2, lessons: [ { id, title, duration, variants: { hq: FilePointer, lq: FilePointer } } ] }`. Lesson `id` is `<courseId><index+1>`, titles default to `Lesson N`.
-- Media pipeline: each lesson track from `data/core/courses/<id>/tracks` is remuxed to metadata-free HQ mp4 and transcoded to LQ AAC mono mp4; both variants are hashed, placed in CAS, and referenced from the course meta.
+- Media pipeline: each lesson track from `data/core/courses/<id>/tracks` becomes a metadata-free HQ mp4 and an LQ AAC mono mp4. Existing compressed inputs are stream-copied for HQ; WAV inputs use native AAC quality-based VBR (`-q:a 1.69`) for HQ, tuned to approximately 192 kbps on representative course audio. Both variants are hashed, placed in CAS, and referenced from the course meta.

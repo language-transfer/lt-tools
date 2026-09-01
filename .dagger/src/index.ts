@@ -190,7 +190,11 @@ export class LtTools {
   }
 
   /**
-   * Remux a media file into an mp4 with metadata stripped using a pinned ffmpeg.
+   * Convert a media file into an HQ mp4 with metadata stripped using a pinned
+   * ffmpeg. Existing inputs are remuxed without changing their audio stream;
+   * WAV inputs are encoded as AAC for practical file sizes and broad playback
+   * support.
+   *
    * We were hoping to use m4a, but it supports only AAC, not MP3 codec. MP4 should
    * work fine, even though it sort of signifies video file.
    */
@@ -198,8 +202,14 @@ export class LtTools {
     materializedCacheDir: Directory,
     input: File
   ): Promise<WithUpdatedCache<FileWithPointer>> {
+    const inputFilename = await input.name();
+    const inputExtension = inputFilename.split(".").pop()?.toLowerCase();
+    const isWav = inputExtension === "wav";
+    // Keep the existing remux cache namespace unchanged so already-packaged
+    // MP3 courses retain their materialized outputs and deployed hashes.
+    const cacheOperation = isWav ? "hqWavToAacVbrQ169" : "remux";
     const cacheKey = `cache-${await this.hashArgs(
-      "remux",
+      cacheOperation,
       await hashFile(input)
     )}`;
     const cachedFile = await getCachedFile(materializedCacheDir, cacheKey);
@@ -212,10 +222,9 @@ export class LtTools {
 
     const outputPath = `/out/output.mp4`;
 
-    // ffmpeg infers stuff from file extension on the output side...
-    // does it for inputs? not sure. this is a leaky abstraction compared to
-    // coming up with our own filename, but /shrug maybe the right call
-    const inputFilename = await input.name();
+    const audioCodecArgs = isWav
+      ? ["-c:a", "aac", "-q:a", "1.69"]
+      : ["-c:a", "copy"];
 
     const container = dag
       .container()
@@ -239,8 +248,7 @@ export class LtTools {
             "-map_chapters",
             "-1",
             "-vn",
-            "-c:a",
-            "copy",
+            ...audioCodecArgs,
             "-movflags",
             "+faststart",
             outputPath,
