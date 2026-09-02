@@ -35,6 +35,11 @@ type FileWithPointer = {
   pointer: FilePointer;
 };
 
+type CourseTrack = {
+  filename: string;
+  title: string;
+};
+
 async function hashFile(file: File): Promise<string> {
   const inputName = await file.name();
   const hash = await dag
@@ -538,20 +543,61 @@ export class LtTools {
   private async getCourseTrackList(
     core: Directory,
     courseId: string
-  ): Promise<string[]> {
+  ): Promise<CourseTrack[]> {
     const listTxt = await this.getCourseDir(core, courseId)
       .file("list.txt")
       .contents();
-    const tracks = listTxt
+    const lines = listTxt
       .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line !== "");
+      .filter((line) => line.trim() !== "");
 
-    if (tracks.length === 0) {
+    if (lines.length === 0) {
       throw new Error(`course "${courseId}" has no tracks`);
     }
 
-    return tracks;
+    let lessonNumber = 1;
+    return lines.map((line, index) => {
+      const columns = line.split("\t");
+      if (columns.length > 3) {
+        throw new Error(
+          `course "${courseId}" list line ${index + 1} has more than 3 columns`
+        );
+      }
+
+      const filename = columns[0].trim();
+      const counterReset = (columns[1] ?? "").trim();
+      const titleOverride = (columns[2] ?? "").trim();
+
+      if (filename === "") {
+        throw new Error(
+          `course "${courseId}" list line ${index + 1} has no filename`
+        );
+      }
+
+      if (counterReset !== "") {
+        if (!/^-?\d+$/.test(counterReset)) {
+          throw new Error(
+            `course "${courseId}" list line ${
+              index + 1
+            } has invalid counter reset "${counterReset}"`
+          );
+        }
+
+        lessonNumber = Number(counterReset);
+        if (!Number.isSafeInteger(lessonNumber)) {
+          throw new Error(
+            `course "${courseId}" list line ${
+              index + 1
+            } has an unsafe counter reset "${counterReset}"`
+          );
+        }
+      }
+
+      const title = titleOverride || `Lesson ${lessonNumber}`;
+      lessonNumber += 1;
+
+      return { filename, title };
+    });
   }
 
   private getLessonId(courseId: string, lessonIndex: number): string {
@@ -573,7 +619,7 @@ export class LtTools {
       );
     }
 
-    const trackName = tracks[lesson];
+    const trackName = tracks[lesson].filename;
     return this.getCourseDir(core, courseId)
       .directory("tracks")
       .file(trackName);
@@ -628,7 +674,7 @@ export class LtTools {
         const duration = await this.fileDurationSeconds(hq.item.file);
 
         const lessonId = this.getLessonId(courseId, i);
-        const title = `Lesson ${i + 1}`;
+        const title = tracks[i].title;
 
         return { lessonId, title, lq, hq, duration, cacheWrites };
       });

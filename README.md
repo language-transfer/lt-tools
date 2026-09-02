@@ -15,7 +15,15 @@ Before or after building, run ./build-cache.sh; this will materialize the cached
 `build-for-language.sh` and `build-cache-for-language.sh` shouldn't be necessary, though they can help if you want to test a smaller subset of the data. I wrote these scripts when I was worried I wouldn't get Dagger to behave when building everything at once; it wasn't working great, for a while there.
 
 
+```
 data/courses $ rclone copy . lt-r2:lt-app-cas/ --ignore-existing
+```
+
+Then, upload the new all-courses.json (be careful! make sure not to bust a bunch of caches -- make sure you only changed what you meant to change).
+
+```
+data/courses $ rclone copy ./all-courses.json lt-r2:lt-app-cas/
+```
 
 Content-addressed layout
 -------------------------------------------
@@ -24,3 +32,5 @@ Content-addressed layout
 - File pointers: fields `{ _type: "file", object: string, filesize: number, mimeType: string }` where `object` is the SHA-256 string (no slashes). Consumers fetch at `${casBaseURL}/${object}` and infer MIME from the pointer. Requests should use the full SHA-256 hash; this will be redirected to prefix/hash
 - Per-course meta files live in CAS under their hash and should be interpreted as JSON. Shape: `{ buildVersion: 2, lessons: [ { id, title, duration, variants: { hq: FilePointer, lq: FilePointer } } ] }`. Lesson `id` is `<courseId><index+1>`, titles default to `Lesson N`.
 - Media pipeline: each lesson track from `data/core/courses/<id>/tracks` becomes a metadata-free HQ mp4 and an LQ AAC mono mp4. Existing compressed inputs are stream-copied for HQ; WAV inputs use native AAC quality-based VBR (`-q:a 1.69`) for HQ, tuned to approximately 192 kbps on representative course audio. Both variants are hashed, placed in CAS, and referenced from the course meta.
+
+Course track lists are tab-delimited with up to three columns: `filename`, optional lesson-counter reset, and optional title override. Rows stay in file order. The counter starts at 1, a reset applies before that row's inferred title, and it increments after every row even when the title is overridden. Existing one-column lists therefore continue to produce `Lesson 1`, `Lesson 2`, and so on. For example, `intro.wav\t\tIntroduction` followed by `lesson01.wav\t1` produces the titles `Introduction` and `Lesson 1`.
