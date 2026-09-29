@@ -1,7 +1,11 @@
-# Ignore everything in data by default
-data/**
+# Media, legacy caches, and integrity snapshots are local inputs. The current
+# source and output hashes live in the course Nix modules.
+/data/
+/legacy/dagger/data/
 
-# Allow directories and any .meta.* files inside data
-!data/**/
-!data/**/*.meta
-!data/**/*.meta.*
+# Nix build results and explicit garbage-collector roots.
+/result*
+/.gc-roots/
+
+# Python helper bytecode.
+__pycache__/

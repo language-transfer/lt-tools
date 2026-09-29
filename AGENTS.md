@@ -1,29 +1,31 @@
-# Repository Briefing
+# Content build repository
 
-## Data & Layout
-- `data/core` is the 5–10GB canonical course data; it is not in git. Integrity snapshots live in `data/core-integrity` as `.meta.sha256` mirrors and should be regenerated whenever `data/core` changes.
-- Course lists come from `data/core/list.txt`; each course has `courses/<id>/list.txt` plus `tracks/` media.
-- Outputs are content-addressed: assets are renamed to their SHA-256 hash and stored under a two-character prefix directory; `all-courses.json` is the stable index that points at those hashes.
+## Build system
+- The current pipeline is Nix. `flake.nix` exports the CAS release, per-course packages, aggregate audio targets, and import apps for x86_64 Linux.
+- Do not add GitHub Actions or proprietary hosted build services. Build and verify locally with Nix.
+- `courses/default.nix` preserves course order. Each course module declares ordered tracks, a recipe default, and source/HQ/LQ/MOV SHA-256 hashes. These are flat file hashes, not NAR hashes.
+- `nix/tracks.nix` supplies `series`, `titled`, `restartAt`, and `withRecipe`. Keep ordinary lists concise; use explicit exceptions rather than another list-file syntax.
+- `nix/recipes.nix` selects the pinned FFmpeg build and HQ arguments. FFmpeg 8.0 and 8.0.3 are separate packages built with musl; compiler/libc and encoder changes can change audio bytes.
+- `nix/pipeline.nix` creates separate fixed-output derivations for every track variant. Expected hashes are authoritative. Never silently accept a new encode or add compatibility behavior for formats that have not shipped.
+- `scripts/package.py` writes the existing buildVersion 2 JSON schema, including stable positional lesson IDs, title-counter semantics, MIME types, and durations.
 
-## Dagger Module (`.dagger/src/index.ts`)
-- Core integrity helpers: `coreIntegrity(core)` builds the `.meta.sha256` tree; `verifyCoreIntegrity(core, integrity)` diffs expected vs. stored and prints `core integrity OK` on success.
-- Packaging pipeline (p-limit to 8 concurrent operations):
-  - Remux each lesson via pinned `ghcr.io/jrottenberg/ffmpeg:8.0-alpine` to metadata-free MP4 (`remuxLesson`/`remuxToMp4`); durations are read with `ffprobe`.
-  - Low-quality AAC mono variant per lesson (`lowQualityLesson`/`lowQualityTrack`).
-  - Metadata files (`<course>-meta.json` and `all-courses.json`) include `buildVersion` (currently 2), lesson durations, and file pointers `{object, filesize, mimeType}`; only `mp4` and `json` MIME types are allowed.
-  - Caching is explicit: pass a writable `materializedCacheDir`; cache keys are hashed per operation and returned by the `*Cache` functions (`packageAllCoursesCache`, `buildCoursePackageCache`) to persist between runs.
-- Public Dagger functions for consumers: package a single course (`buildCoursePackage`) or all courses (`packageAllCourses`), plus their cache-writer counterparts; `baseUrl` defaults to `https://downloads.languagetransfer.org/cas`.
+## Local data and retention
+- Media is not checked into Git. `data/`, `.gc-roots/`, and result links are ignored.
+- Recording hashes, importing files, and building are separate user-run operations. Do not run them unless explicitly requested.
+- Hash declarations use `source` and `computed.{hq,lq,hqMov}`, never positional arguments.
+- `nix run .#record-hashes -- --core DIR` previews source pins; `--write` updates declarations only. `accept-hashes` similarly previews/writes computed pins from saved Nix error logs.
+- Import sources with `nix run .#import-source -- data/core`; it validates hashes and adds explicit GC roots.
+- `nix run .#import-computed -- /path/to/cas` finds and imports declared audio files by verified hash. It does not require a second checked-in manifest.
 
-## Scripts & Commands
-- Install Dagger deps inside `.dagger`: `yarn install --cwd .dagger`.
-- Integrity: `./create-core-integrity-data.sh` regenerates checksums; `./check-core-integrity.sh` verifies `data/core` vs `data/core-integrity`.
-- Builds: `./build.sh` produces the full CAS dump; `./build-cache.sh` materializes cached steps. Language-scoped variants (`build-for-language.sh`, `build-cache-for-language.sh`) exist for partial runs.
+## Verification and publishing
+- Normal builds reuse the Nix store/binary caches, then try CAS fetching before encoding; pinned hashes always enforce output integrity.
+- `nix run .#test-audio-reproducibility` is a separate test that explicitly rebuilds individual outputs with CAS fetching disabled, in HQ/derived passes with sequential batches of at most 64 outputs; `--dry-run` only prints commands. Its recipe-only derivations live under `_internal.reproducibilityTracks`, not public build targets.
+- For intentional changes, use `lib.fakeHash`, review Nix's actual hashes, and update only accepted outputs. Retain stable names to allow reuse of completed mismatch outputs; failed builds do not provide GC roots.
+- No permanent short-clip regression fixtures are needed: the expected full-file hashes enforce audio integrity. Verify metadata order, titles, IDs, pointers, and serialization when changing packaging.
+- `nix build .#cas` or `./build.sh` produces the release. `nix build .#retained -o .gc-roots/content` roots sources and release together.
+- Release files are symlinks into the store. Dereference them when exporting. Upload hashed objects append-only and publish `all-courses.json` deliberately; builds must not publish automatically.
 
-## Conventions
-- TypeScript: ESM, 2-space indent, deterministic/pure Dagger functions; keep MIME map/pointer shapes consistent.
-- Bash scripts start with `#!/usr/bin/env bash`, use `set -euo pipefail`, and assume repo root (`cd "$(dirname "$0")"`).
-- `.meta.sha256` files must mirror asset paths exactly; regenerate after any asset rename or addition.
-
-## Validation
-- After modifying assets or Dagger logic, run `./check-core-integrity.sh` and expect `core integrity OK`.
-- When changing packaging behavior, consider running `dagger call packageAllCourses --core data/core --materialized-cache-dir <dir>` plus the corresponding `*Cache` call to refresh cache artifacts.
+## Release review and upload
+- `nix run .#release-cas -- result` compares against a freshly fetched published root and verifies the local CAS. Media changes are matched by course/lesson/variant; show course JSON hash changes even when media is unchanged.
+- `--upload` requires an interactive terminal and a typed destination confirmation. Never add an unattended approval flag. Default destination is `lt-r2:lt-app-cas`, matching the historical README. Credentials remain in rclone config.
+- Upload hashed objects append-only with rclone copy/immutable; publish `all-courses.json` last, only after successful object upload. Never use sync or delete remote objects. Recheck the baseline before publication; allow only one publisher at a time.
