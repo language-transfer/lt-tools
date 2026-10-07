@@ -51,6 +51,12 @@
         _internal.reproducibilityTracks = reproducibility.tracks;
       };
       apps.x86_64-linux = {
+        reconcile-pins =
+          let command = pkgs.writeShellApplication {
+            name = "reconcile-pins";
+            runtimeInputs = [ pkgs.python3 pkgs.nix ];
+            text = ''exec python ${./scripts}/reconcile-pins.py "$@"'';
+          }; in { type = "app"; program = "${command}/bin/reconcile-pins"; };
         release-cas =
           let command = pkgs.writeShellApplication {
             name = "release-cas";

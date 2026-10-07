@@ -163,6 +163,24 @@ and separate from producing a release; normal builds retain all cache reuse.
 
 ## New tracks and changed recipes
 
+After editing a course's `tracks` declaration, reconcile missing pins:
+
+```sh
+nix run .#reconcile-pins -- --course ingles_completo
+nix run .#reconcile-pins -- --course ingles_completo --write
+# Optionally hash sources for the new pins in the same operation:
+nix run .#reconcile-pins -- --course ingles_completo --core /path/to/core --write
+```
+
+The helper evaluates `tracks` with Nix, previews a diff by default, and adds
+missing declarations with `lib.fakeHash`. With `--core`, all newly added source
+files must exist; their flat SHA-256 hashes replace the source placeholders.
+Existing pins are preserved, including unused pins (which are reported).
+Computed hashes still use the build-log workflow below. The helper validates the
+candidate with Nix before writing and refuses unfamiliar `pins` layouts. It
+does not import files or build audio. Run it from the repository root, or pass
+`--repo /path/to/lt-tools`.
+
 Add a filename to the course's `tracks` list and a named declaration to `pins`:
 
 ```nix

@@ -5,10 +5,90 @@
   tracks = [
     (titled "Track 0" "ingles_completo000.wav")
     (restartAt 1 "ingles_completo001.wav")
-  ] ++ series "ingles_completo" "wav" 2 70;
+  ] ++ series "ingles_completo" "wav" 2 80;
 
   # Flat SHA-256 hashes of source files and computed audio, not NAR hashes.
   pins = {
+    "ingles_completo071.wav" = {
+      source = "47522bb274e19a0c6d33a7268750fc9a64e4058e26351cfb62132440831a888c";
+      computed = {
+        hq = lib.fakeHash;
+        lq = lib.fakeHash;
+        hqMov = lib.fakeHash;
+      };
+    };
+    "ingles_completo072.wav" = {
+      source = "60dd5215da734689bd2e835a1a85a92fcbf9f2c0e998bb7cf548e753bdc5538d";
+      computed = {
+        hq = lib.fakeHash;
+        lq = lib.fakeHash;
+        hqMov = lib.fakeHash;
+      };
+    };
+    "ingles_completo073.wav" = {
+      source = "c6f1f383833114d421c38848763d659c4fccf40500f6b3ec359b425df143cc3f";
+      computed = {
+        hq = lib.fakeHash;
+        lq = lib.fakeHash;
+        hqMov = lib.fakeHash;
+      };
+    };
+    "ingles_completo074.wav" = {
+      source = "9c2e490e415d1b16114d85bf0af5341f7e74063f94310ab6e063bd68c3cf74fc";
+      computed = {
+        hq = lib.fakeHash;
+        lq = lib.fakeHash;
+        hqMov = lib.fakeHash;
+      };
+    };
+    "ingles_completo075.wav" = {
+      source = "09b1edbbd2b296330b2e632e68a6bf3bf4f459c1a5ec519a30bc14bce6fb1358";
+      computed = {
+        hq = lib.fakeHash;
+        lq = lib.fakeHash;
+        hqMov = lib.fakeHash;
+      };
+    };
+    "ingles_completo076.wav" = {
+      source = "7f621eae45f8ffcc50714cf4edfe8cafbc84a1e4b02907cab7d30896f5ed2606";
+      computed = {
+        hq = lib.fakeHash;
+        lq = lib.fakeHash;
+        hqMov = lib.fakeHash;
+      };
+    };
+    "ingles_completo077.wav" = {
+      source = "1c9a10067f887e72dcd09f98dc552a2e2408ec308964c8a47073e0d6c5060f02";
+      computed = {
+        hq = lib.fakeHash;
+        lq = lib.fakeHash;
+        hqMov = lib.fakeHash;
+      };
+    };
+    "ingles_completo078.wav" = {
+      source = "260aec476b80caf8500fe0f7fccd8915a05df9f1d51334b38c77769a5c0ed809";
+      computed = {
+        hq = lib.fakeHash;
+        lq = lib.fakeHash;
+        hqMov = lib.fakeHash;
+      };
+    };
+    "ingles_completo079.wav" = {
+      source = "f6b2d4fb40b3d41ac6d8490e88522249bb20175d2b7c0e9dd895eb3464b657f3";
+      computed = {
+        hq = lib.fakeHash;
+        lq = lib.fakeHash;
+        hqMov = lib.fakeHash;
+      };
+    };
+    "ingles_completo080.wav" = {
+      source = "e7c9499a68257e01e7e0e3fa1a8ca385d29ae3f62ba41a5c9f2dadcb1c61f468";
+      computed = {
+        hq = lib.fakeHash;
+        lq = lib.fakeHash;
+        hqMov = lib.fakeHash;
+      };
+    };
     "ingles_completo000.wav" = {
       source = "c67db009b31f0b68c6039a5ef792eb3c1384326f2160394b5b8a4d78d5f9318a";
       computed = {
