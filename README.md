@@ -205,7 +205,31 @@ nix run .#record-hashes -- --core /path/to/core --course arabic --track arabic03
 nix run .#import-source -- /path/to/core --course arabic --track arabic039.mp3
 ```
 
-Build HQ first. A `lib.fakeHash` deliberately produces a hash-mismatch error
+After recording and importing sources, build new placeholder outputs without
+managing logs yourself:
+
+```sh
+nix run .#build-new-tracks -- --course ingles_completo --dry-run
+nix run .#build-new-tracks -- --course ingles_completo
+# Accept the verified proposal:
+nix run .#build-new-tracks -- --course ingles_completo --write
+```
+
+This selects only computed hashes still set to `lib.fakeHash` (also accepting
+the equivalent all-zero hex hash). Add `--track FILENAME` to narrow selection.
+It builds HQ first, then LQ/MOV, using a temporary declaration snapshot so the
+preview can discover derived hashes without editing your files. It verifies
+the proposed outputs with Nix before showing a diff or writing any pins.
+Existing real hashes are never replaced. Incomplete or unexpected results
+stop the operation without writing pins. Accepted hashes use lowercase hex,
+matching the course declarations. Logs and verified output GC roots
+remain under `data/hash-builds/run-*`; override the parent with `--logs DIR`.
+Previewing runs builds too; `--dry-run` only evaluates and lists selections.
+Sources must already have real pins and be imported (or otherwise available).
+Rerunning with `--write` performs the same workflow, reusing store outputs where
+available. This command does not create a release or publish anything.
+
+For manual control, build HQ first. A `lib.fakeHash` deliberately produces a hash-mismatch error
 containing the actual hash. Save the log and use the helper to preview changes:
 
 ```sh

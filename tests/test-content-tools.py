@@ -1,5 +1,6 @@
 """Synthetic tests for pin editing/import planning; never run Nix or FFmpeg."""
 import hashlib
+import base64
 import importlib.util
 import json
 from pathlib import Path
@@ -167,7 +168,8 @@ class Tools(unittest.TestCase):
             subprocess.run(cmd, check=True, capture_output=True)
             self.assertEqual((root / 'example.nix').read_text(), TEMPLATE)
             subprocess.run(cmd + ['--write'], check=True, capture_output=True)
-            self.assertIn(f'hq = "{actual}";', (root / 'example.nix').read_text())
+            expected = base64.b64decode(actual.removeprefix('sha256-')).hex()
+            self.assertIn(f'hq = "{expected}";', (root / 'example.nix').read_text())
             log.write_text(log.read_text().replace('example001', 'unknown'))
             result = subprocess.run(cmd + ['--write'], capture_output=True)
             self.assertNotEqual(result.returncode, 0)

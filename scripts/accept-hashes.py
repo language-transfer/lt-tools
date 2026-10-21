@@ -1,30 +1,29 @@
 """Preview or accept computed hashes reported in a saved Nix build log."""
 import argparse
+import base64
 import json
 import re
 from pathlib import Path
 from pins import apply, select
 
 
-def main():
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument('catalog', type=Path)
-    p.add_argument('log', type=Path)
-    p.add_argument('--courses', type=Path, default=Path('courses'))
-    p.add_argument('--write', action='store_true')
-    a = p.parse_args()
+def parse_mismatches(catalog, log):
     names = {}
-    for course, track in select(json.loads(a.catalog.read_text())):
+    for course, track in select(catalog):
         stem = Path(track['filename']).stem
         for field, suffix in [('hq', '-hq.mp4'), ('lq', '-lq.mp4'), ('hqMov', '-hq.mov')]:
             name = stem + suffix
             if name in names:
                 raise ValueError(f'Ambiguous output name: {name}')
             names[name] = (course, track['filename'], field, track['hashes']['computed'][field])
-    log = re.sub(r'\x1b\[[0-9;]*m', '', a.log.read_text())
+    log = re.sub(r'\x1b\[[0-9;]*m', '', log)
     matches = re.findall(r"hash mismatch in fixed-output derivation ['\"](/nix/store/[^'\"\n]+\.drv)['\"]:\s*specified:\s*\S+\s*got:\s*(sha256-[A-Za-z0-9+/=]+)", log)
     changes = {}
     for drv, value in matches:
+        decoded = base64.b64decode(value.removeprefix('sha256-'), validate=True)
+        if len(decoded) != 32:
+            raise ValueError(f'Expected a SHA-256 hash: {value}')
+        value = decoded.hex()
         name = Path(drv).name.split('-', 1)[1][:-4]
         if name not in names:
             raise ValueError(f'Unrecognized output in log: {name}')
@@ -36,7 +35,18 @@ def main():
         print(f'{name}: {old} -> {value}')
     if not changes:
         raise ValueError('No recognized fixed-output hash mismatches in log')
-    apply(a.courses, [(*key, value) for key, value in changes.items()], a.write)
+    return [(*key, value) for key, value in changes.items()]
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument('catalog', type=Path)
+    p.add_argument('log', type=Path)
+    p.add_argument('--courses', type=Path, default=Path('courses'))
+    p.add_argument('--write', action='store_true')
+    a = p.parse_args()
+    changes = parse_mismatches(json.loads(a.catalog.read_text()), a.log.read_text())
+    apply(a.courses, changes, a.write)
 
 
 if __name__ == '__main__':

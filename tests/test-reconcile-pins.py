@@ -13,7 +13,15 @@ spec.loader.exec_module(module)
 
 class Reconcile(unittest.TestCase):
     def test_preserves_existing_and_unused_pins_and_is_idempotent(self):
-        original = (ROOT / 'courses/ingles_completo.nix').read_text()
+        original = '''{ lib, ... }: {
+  pins = {
+    "ingles_completo000.wav" = {
+      source = "existing-source";
+      computed = { hq = "existing-hq"; lq = "existing-lq"; hqMov = "existing-mov"; };
+    };
+  };
+}
+'''
         existing = [f'ingles_completo{n:03}.wav' for n in range(71)]
         names = existing + ['ingles_completo071.wav']
         result = module.reconcile(original, names, existing, {'ingles_completo071.wav': 'a' * 64})
