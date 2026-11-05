@@ -5,10 +5,90 @@
   tracks = [
     (titled "Track 0" "ingles_completo000.wav")
     (restartAt 1 "ingles_completo001.wav")
-  ] ++ series "ingles_completo" "wav" 2 80;
+  ] ++ series "ingles_completo" "wav" 2 90;
 
   # Flat SHA-256 hashes of source files and computed audio, not NAR hashes.
   pins = {
+    "ingles_completo081.wav" = {
+      source = "f02d999387c1a084bacf8dbfa571a74465d8dcd11db943053f469f456fa33407";
+      computed = {
+        hq = "961cc7b8770fcdf10adfd507e2bba28c664a145e28c5f3feeebf3703c42d68e3";
+        lq = "4625a935d00f37d6d951de3645d412fd2f51acee0d81031aae339f37f3dbc442";
+        hqMov = "153c9945c12e7217283ad0f18bf95c7349a5d919c9781150ed7a4702aee44fd6";
+      };
+    };
+    "ingles_completo082.wav" = {
+      source = "2cd5812b6d50fc791e7e3ba4ba64d43d121ef60118ae2d21a776b8cd85dc7707";
+      computed = {
+        hq = "9f4b618323d27c0005c051e68e7d3d6b785253e54e5c727567a973073351a5ee";
+        lq = "a2e82826812bb11a29cd11dee4762915f2528ab6c472bcd2fae4155adbb8318c";
+        hqMov = "37e5668b380b964ccdf93dbc3b5e242832405d72c8e8721df887a165d024ad69";
+      };
+    };
+    "ingles_completo083.wav" = {
+      source = "2cbab4ec6a353f69e83da82fb9b620eb821f486858925b835a2b5590a4b2889c";
+      computed = {
+        hq = "b0a9f80645b5cfeaa2450d7c67647f6d020c4384cfafee751e91e9f8c9415f32";
+        lq = "50e428863eeaed50756caa6d849b2c8c970655dc4afd5864c8ef813d34237933";
+        hqMov = "48bdc849503bbd3a9a4065c79c1c02bc8d81086de27d07fd4b42dd81dc1c164d";
+      };
+    };
+    "ingles_completo084.wav" = {
+      source = "a91f1accdc35159ff7a3a6bcdeb4ecc237cd3f3d05c191dd0f1c86027cb0a6f7";
+      computed = {
+        hq = "77d553008710bcc052a94b8c99ca6b6dd48e3ed92a457c769f4832f995f186a0";
+        lq = "5a45904602da661c75d5274cd4a37d4ab986f6cfe82ddabe406a564bf10cf797";
+        hqMov = "732cf7a989d3dfbc25cdb939aa4d4db53276059ac4a1f022233ba107e55c945b";
+      };
+    };
+    "ingles_completo085.wav" = {
+      source = "4c6e251910b7e1aeca7af389e0c780811a7e0dbb0e25b7a71b7c11813cf9ec51";
+      computed = {
+        hq = "5ae9b0b415c2debde90f6e9bddde90e208bcdbcdbac479529a7127d322c85e36";
+        lq = "21a69c43a4837754b8ba3144487f2597355b5baee4ef319c95d1c8fa648ecee5";
+        hqMov = "854bc598e2d74c683f33ce225f47a37cabbedc1fc48a09c27654152415a22f40";
+      };
+    };
+    "ingles_completo086.wav" = {
+      source = "04faafe806277535bbee6852a9074601f5574302efef55906df226f8bf7a59db";
+      computed = {
+        hq = "536633f2c3327d581ec1a99c84efa569bec1580f076e45dc2d180e9037a187be";
+        lq = "d64e6667fcf33895dbffaa4a5f9b0df265b82e6dc33b446fda958a2167642d70";
+        hqMov = "b2ebb246a011208f37f3dfb6d31ca31d38bba3af34c28faa41548095c379d27e";
+      };
+    };
+    "ingles_completo087.wav" = {
+      source = "b5459dedcc0c90b27b88a1110378b804b2959232945c900938d79dd54a786a8a";
+      computed = {
+        hq = "420c755d10ea9e0366f2b9545f4636896c5ea12c3758a5a40cfb01c80c21d82c";
+        lq = "bf93590a911936d2598bef7e6f506c9e71ef09ce15d9b926f8f1dc0da650f8f7";
+        hqMov = "4db96db28bbcc5be2b00f3ff0bd04f1a63b86a660eab5be538195f1a696b8ba4";
+      };
+    };
+    "ingles_completo088.wav" = {
+      source = "9964d3ac401ed578c788ac01393f84fff7bb2f1e99a2a702f770c3de1993165b";
+      computed = {
+        hq = "b717768b15d0ab216dad1b1c835419c91eb6d99fb058a468751763ee0357e582";
+        lq = "a896bc522a001dfd300143bc30d0a125a11ca11f9a97615f94dc6b21c452bc6b";
+        hqMov = "bc2356ed9812dbcf22f7a7dd48c70d7d5dd085916b5d5ffaf78dbf9e3283c7b7";
+      };
+    };
+    "ingles_completo089.wav" = {
+      source = "4d11e02a19284a47e9f24c574503daecda7ea62235e4540a523fb5127d7deaa0";
+      computed = {
+        hq = "7fb1de42c6d50548fc4fc14f47218a7a13743a6decd554b8350dc2a53f803afe";
+        lq = "d3b5aafc2ef1cb2f527cee99964a7aaf772dea314a27b83f07870208c4c4c219";
+        hqMov = "547fa3161c3759f2dd6c628fc8ef5ca5622c0345315d048083c8d16a9c1f42a2";
+      };
+    };
+    "ingles_completo090.wav" = {
+      source = "518c2e910ce9579514c30bdde843d4ea095277f3225b5bbc36e373e32bb4ae62";
+      computed = {
+        hq = "79ca40e4d40abeac2cc03d44d6dd1fbef83d66ed53ca2e1a2e50e5f805bcd164";
+        lq = "d330b4411c1db4a6465a4fe32cb36c2bd7a8e05b2357cbc05b80d6c1ac099640";
+        hqMov = "9694a6345a5d34e057f1698811305552d917fe41577c3e0566679a10ed1e7f0b";
+      };
+    };
     "ingles_completo071.wav" = {
       source = "47522bb274e19a0c6d33a7268750fc9a64e4058e26351cfb62132440831a888c";
       computed = {
