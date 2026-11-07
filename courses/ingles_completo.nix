@@ -5,10 +5,220 @@
   tracks = [
     (titled "Track 0" "ingles_completo000.wav")
     (restartAt 1 "ingles_completo001.wav")
-  ] ++ series "ingles_completo" "wav" 2 90;
+  ] ++ series "ingles_completo" "wav" 2 115 ++ [
+    (titled "¿AHORA QUÉ?" "ingles_completo116.wav")
+  ];
 
   # Flat SHA-256 hashes of source files and computed audio, not NAR hashes.
   pins = {
+    "ingles_completo091.wav" = {
+      source = "8922cffa4557f8d442d22325c6eb6d6d1183d41db6fb1aa9d1398b5f4c48968f";
+      computed = {
+        hq = "6eef40a20b33868867eedb67038e3409b94275b728dfaedf3424a6998ed64163";
+        lq = "bee0da7d21d70e64299e5d3b063d0d144b371efeda3c7dcbb72b4d23f297130c";
+        hqMov = "2267baeef7392b7af16a169a18f2446550aa4978c184fa40623aaeb63dcfe2f2";
+      };
+    };
+    "ingles_completo092.wav" = {
+      source = "52fba86c3a0b21e7ac21269c5795bfe57f5f463af63878a785c8da4f56872b91";
+      computed = {
+        hq = "90f26c081f046950741affbf5643b4575f45ba39c53ef1a9c224ce82de2490b0";
+        lq = "dda9f8f02f97241745a14514185b939fd90a34d614bb99a53c5f4445cb50e070";
+        hqMov = "8089d96e3788fcd5286b2c1cbd53fe2e45190262b28686cec1382bca7b24c032";
+      };
+    };
+    "ingles_completo093.wav" = {
+      source = "2a9bab23d3fa766ec6815d908d51143ea18235d1a0c835d33000ea4f7486c8cc";
+      computed = {
+        hq = "a87dd430b906dcfd23cbdd7b8db9437b619e2d69e527368adea7316117935589";
+        lq = "1475016cc9f07b357d0fdfd5468e2adc109bb2e6dce581f0f564fc773516443c";
+        hqMov = "c5f54aecc98e7d54cd016e5c1f62835f398a2abbf755bd3c09fbf76bc5b9c298";
+      };
+    };
+    "ingles_completo094.wav" = {
+      source = "251948e44627de68d48f0c604ea5751c9a7f1211cca61eab20410eb0cf391b6c";
+      computed = {
+        hq = "36adb045c67718b89455b55d489bf9eda577e5b4a07a6acbd3c0bc1b8aff9c34";
+        lq = "bc89748a9811dd3e27dcd96ad84bcca3a71592eefc1ffb0098154ed717b0db97";
+        hqMov = "c92d64324975fa4e05e2b71ce9ec05298085b108b0dd7d0c6b6533571063cadf";
+      };
+    };
+    "ingles_completo095.wav" = {
+      source = "8f96c51c852980ba0ef16ea5b6bc5c8c99d0eb2cb61fc7d777ef08ef5faaae0c";
+      computed = {
+        hq = "431450cfa66dc16766885156b7acf1ab88038a165f7561c279e2110128996ee5";
+        lq = "7919f9711d361ea11639cfde61718b8673668e755e9770b872dc29d8c8e7f7ba";
+        hqMov = "632ff09db81fa32718782e439108837ed069eb356d6a818fcd37b95538319812";
+      };
+    };
+    "ingles_completo096.wav" = {
+      source = "175537b517791074a55059ae2e91ccaab1f4b0f9c6d4b278f2206790b0b764a0";
+      computed = {
+        hq = "9bdcf303d50c79f8a183e93e72595d09948703e0b1b73cd6cc8130192993235c";
+        lq = "8383c89924ea3b48bd10448c96feacd319ed91e625b47c792ab4b916e5bb1d5d";
+        hqMov = "abcc47f6737616afcc05e7fe3e48a891533d41ebb1e993fecdbebced6224d576";
+      };
+    };
+    "ingles_completo097.wav" = {
+      source = "0b2acefe9afb8025f70ecf169b913254eae611e1c40c1d4b235a158e344598e8";
+      computed = {
+        hq = "c22b4a286dce53203e213f514ad8926b8a5e62332524136a7d34cb01543fd490";
+        lq = "7b06bfc48b51e680d3cb008be285db29aa8e0916be56319c74cf491eedeaac72";
+        hqMov = "215053462db0479522faad6e18095a986a621b8c27c1d2e431265f303fce2edc";
+      };
+    };
+    "ingles_completo098.wav" = {
+      source = "a30a42ba52ac06c083aca6962102f14bb1bd50b1e473393c7d54b21e3f32cfe7";
+      computed = {
+        hq = "dbb3c1810ed6ec85164450e7db2ebab09028b02ecabf7f879da177694befdaa1";
+        lq = "483c9538bb43c9bfab067ee9b278db9bc8ad80537dca3bfd8251fb579dbdb8cf";
+        hqMov = "5e55ed400a20f3cce05f403d5bc8440fb528534fad905715a711171ccdc14bc7";
+      };
+    };
+    "ingles_completo099.wav" = {
+      source = "c56609e939e8cc6d5e70692512e368c63a448e118ce50ab3900c67e38a4a75f8";
+      computed = {
+        hq = "26b6912be583a3e47c0d9be513ccb7d259c553861f67b5fb1e67267073093b5e";
+        lq = "360d47d1b153c544afd64db4f8fd2f9baf2bba52c02645a6b38c828fffdb39ef";
+        hqMov = "1d784d581ed46d6d37a043c6393e293d9e31e445efc1ba4c36a94b6bf5e58582";
+      };
+    };
+    "ingles_completo100.wav" = {
+      source = "fb072fc28666eec0500a05067f565feaf32b46ce7adff7bd0ad514f18bcad4c4";
+      computed = {
+        hq = "6fbbee1243acf5c7b32267afe0fa0ce2a9eb1d3b8d9a9034de1db121ea776c20";
+        lq = "59fa6862688247ba0fdfccfce28fad1f202291ec52619c79609e1d59d2f04b6b";
+        hqMov = "9ce6cace7f9c73ab81369a0415e0d0b77fba6c72c2dfea9554a240fe427987ec";
+      };
+    };
+    "ingles_completo101.wav" = {
+      source = "600ab87d275d5445a0082baf441beb236a36c47038ddd05e07c4e03545a8ed3c";
+      computed = {
+        hq = "cc4f1e4e2e772816bd67521bc569928c06ee576030b609929ecc8faf9700893b";
+        lq = "0433b813844c43ac1eeebb04cec0a07969f788ffa287a0df899642e2ff47bdce";
+        hqMov = "87737f47d58156e3bbad6cdb325a63f3cc7663ab2a6bc1222d7084b6996a269e";
+      };
+    };
+    "ingles_completo102.wav" = {
+      source = "9e08468a7b3d284d99fa477de3ace1ba2072094a0bf4cbc3941eaab97fd6641a";
+      computed = {
+        hq = "ed11e51c492ee6dad84933393550ef3be28a2530b84b769633ef4ff5e4a5fbea";
+        lq = "a5ece57bd8507ca8f016f6872651df7295dab602ab68610fd591fe7a6d76fc6a";
+        hqMov = "9aa51ba9ab9e086294ba2bd59c61299be21cf74c064f6997e113115da73ad9c2";
+      };
+    };
+    "ingles_completo103.wav" = {
+      source = "d33845bdd3295ece1e110187ea5ad39f7cb7a415cea6f81472689e54029e22f8";
+      computed = {
+        hq = "6506b7b1caebab3b299a1350f545308ec154a54435538fa3e2d1ce3ffb5fbff8";
+        lq = "e86c562af7a3c01d20b991a36899ef4fee9d8cff20d001c27f734893087728b7";
+        hqMov = "a29368a8964f56edee85e298ef9d6f9d77bc9027e2be27fcebe4f285c8107c2b";
+      };
+    };
+    "ingles_completo104.wav" = {
+      source = "a899519bf61c6371597ab15ccd52bf5b2608b50dd4bf386460789f4ee91ddf2c";
+      computed = {
+        hq = "ae28496d84e2b7585d452e8458adb1338d88f3f96193d8b2eb4f6e463e1f964e";
+        lq = "09db003588a6c7e69f6da2d7454c143c10b2643727f013ef39f4926f174d1dc8";
+        hqMov = "e5ad38118a25e9aff28e8731177a07bba92a5fdfd08db1d5f48eff455a5023d3";
+      };
+    };
+    "ingles_completo105.wav" = {
+      source = "77d71b4975c21900fa5b932828e37164ef781bd538409a3650c437346a273a9e";
+      computed = {
+        hq = "7a5405cbb39b29787ba87fd2c2733577fce0c903310b8852597e8dd466351488";
+        lq = "c12a0fb9f4f7927c3414c310a15de2cbe7e2e3ebb25fa412a91968aa4efefdff";
+        hqMov = "4d862b8fd3e8e5e603d34f2b6637e89a9e84d4f4c7ca0d610505850cc0d21f6a";
+      };
+    };
+    "ingles_completo106.wav" = {
+      source = "7b318bba7f4f40d85314af7dadf187135917783170cff2071591ea7cd438661a";
+      computed = {
+        hq = "ad86834e84b939d6fdf83cc5ed64e5699e297dfc1a81dd2e9d58fbe2793f6d7a";
+        lq = "34fe674721eb66740b7142a2ff8e090e5646631e6387560d8bf8fd6c4fb904a6";
+        hqMov = "3ccdf39fcb088a40eedb899ec0422bd99bc99237d0372f07801da4f5e0065017";
+      };
+    };
+    "ingles_completo107.wav" = {
+      source = "57c8048621b5e0b090e468d8aa3f0015527342f32ca4b187d17913f7bc1c5da3";
+      computed = {
+        hq = "c4ac3c6e84b2d9597837967338ec7b55217c92a36de770c3648452ee3a82cbc2";
+        lq = "99a579a6b765667d2b3ce5f7daf63fe64c199911c3b816be45494c5d0e12d14b";
+        hqMov = "10256acbc90f8ee87ae48ac20d93ca1b31cece70d673d6a8d6217b69b2a125ae";
+      };
+    };
+    "ingles_completo108.wav" = {
+      source = "3d7e47076c587dcc428ec1ed028d40771aad7b01401f90bcc2f6ed5aa0a60c3a";
+      computed = {
+        hq = "a5c40387857be1e789dff6b5a81a2387e43c272336d1246c6745468c62793b7d";
+        lq = "2fb5c6ac441b76a073fca83e3fb1fab8d1b0aeb79f8f3aedcaffefbdd0ef38c0";
+        hqMov = "83ebb4f82c7d03e5263a9c08773f76551c41d9cf615b6592a6bb2f24fc4ffef2";
+      };
+    };
+    "ingles_completo109.wav" = {
+      source = "289a4d61925a338f94ce621a2270450bb3b35ceee98372547c010a4831dd4412";
+      computed = {
+        hq = "f2c513f71c654cf57190c7c7cc0b1e5577ead9ee9dc5f9cf8a1fc91abc9ebecf";
+        lq = "f42dadc0feab8e19c1953152c60309d7800317923ac46e48ab729b582b81a539";
+        hqMov = "34a9990c3639303b4883ddb935776e64b180e9b68ea2d266ade9e8e4380910dc";
+      };
+    };
+    "ingles_completo110.wav" = {
+      source = "58f91cd335c4cccbc29a4029cbad7d0cd5f00722044aea55418d49aa091544f1";
+      computed = {
+        hq = "6f8b36bbfec2fb82bca888c520192af4f1a990e808ca5f76fe98f7ec3031f0d7";
+        lq = "76ae32b5c43956d3885920228133574c7b8a2647f619371f8a2d6a90ad8021e1";
+        hqMov = "28af13d6b56f12596e83d4ee6e2aa5c99ce0e606f55c0e40fe0662bcd84a9b1a";
+      };
+    };
+    "ingles_completo111.wav" = {
+      source = "0cdf0e27ecf39afcbe89a84b648c6131e2990d517b39f20d4347a0c2ac17eeaa";
+      computed = {
+        hq = "fa9608e0acf5c96d4f4d8c1819e76ddec6335f21fb606595955fffb97711d420";
+        lq = "c1dd649231c950dd5603e747537fec925ed6ac5626440f70cc8d9fd30d4f5494";
+        hqMov = "c2f1b96e356e36aad123a1c5cf065f2df714d102702db6cd1fe7aff19975db77";
+      };
+    };
+    "ingles_completo112.wav" = {
+      source = "381ae61c8a39998b8ed80db398e1e3980fb0e126c43bc395fe00dac98e7c3058";
+      computed = {
+        hq = "0bc90350fa7e2e86cf49e4fa62944a117efda13bacb26b5cdf8fffcc9d0af865";
+        lq = "5152e8e2fd82ce412cd8d6d5a26550ee129c0e1a9be3fd1095c3b6edce5c5c83";
+        hqMov = "5d892e4ce1183ae39c31c1bb31eb5530b0dcb1ab410ccc620e0d1aa98fbf55c3";
+      };
+    };
+    "ingles_completo113.wav" = {
+      source = "dc0f4a84169c7fee03e04602db55f3b661d1254c5bc583d6633c104f3a6d2a63";
+      computed = {
+        hq = "ac35de297ceebe136f403fb8e1c0c367568d00d4c4d6870ca5aee94fe4917251";
+        lq = "b785f12541cd0081b6b1be0fe3fa6bc7983b6016e8e1afe074a224529001a9e0";
+        hqMov = "e5d9e7e617e3fb79ad7893e8b27e79bfcac2a0e365d91b9a263f064bf424cc3d";
+      };
+    };
+    "ingles_completo114.wav" = {
+      source = "5f4922a9073096b51cdd2f5acaf70ce188cd839739b91be0c6b8f86be114f2a2";
+      computed = {
+        hq = "e3dac1fab81153d8623ba27cf1ae239cb7113e889b036a7a02ad0b5e8d8e9aec";
+        lq = "7a60bc634d1d9a3368b62f4d4bb4e46c286e74fca6d810bcb5716c4729be2468";
+        hqMov = "7aa4ca91ed6e7b7ac42cbc9f3246fdf7667146c32e571d842c3315d838f4a187";
+      };
+    };
+    "ingles_completo115.wav" = {
+      source = "6f66df9dfdde4839bfbec3908430075bdea88380837cb8149bfdde6570faf9db";
+      computed = {
+        hq = "b50c6a06a63ad8cf2b4f56f80c46a5fad849b21168c2f39fc5f7f5f07d9695bc";
+        lq = "939796ca0cdf529b17660dd2cb8d4bf97bd2cfda2a0644ec1e08ecc4722052d8";
+        hqMov = "fcf2a627a8537a09e1f1af47d6c7042c58233d6b683ba485fe6f4e31204252c1";
+      };
+    };
+    "ingles_completo116.wav" = {
+      source = "791407100f6ff8809dcb4f436e9adaa4bb7ba5d2df979d945c60f6fc540ee5be";
+      computed = {
+        hq = "2d631a1a3186495792a85eb30f51fa7e95aa4f8fa5c653af76f42f1dee9f12e8";
+        lq = "19df646d32b8647f1796ba2b2a1db394898adb7b8777773050e1f8a0ead6bfa0";
+        hqMov = "df40d7bf2314df9c65c47bc1cd27f0316676f271dfe51b27e69b0acb89d56ed4";
+      };
+    };
     "ingles_completo081.wav" = {
       source = "f02d999387c1a084bacf8dbfa571a74465d8dcd11db943053f469f456fa33407";
       computed = {
